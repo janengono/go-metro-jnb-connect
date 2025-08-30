@@ -26,15 +26,23 @@ export default {
 				foreground: 'hsl(var(--foreground))',
 				primary: {
 					DEFAULT: 'hsl(var(--primary))',
-					foreground: 'hsl(var(--primary-foreground))'
+					foreground: 'hsl(var(--primary-foreground))',
+					light: 'hsl(var(--primary-light))',
+					dark: 'hsl(var(--primary-dark))'
 				},
 				secondary: {
 					DEFAULT: 'hsl(var(--secondary))',
-					foreground: 'hsl(var(--secondary-foreground))'
+					foreground: 'hsl(var(--secondary-foreground))',
+					light: 'hsl(var(--secondary-light))',
+					dark: 'hsl(var(--secondary-dark))'
 				},
 				destructive: {
 					DEFAULT: 'hsl(var(--destructive))',
 					foreground: 'hsl(var(--destructive-foreground))'
+				},
+				alert: {
+					DEFAULT: 'hsl(var(--alert))',
+					foreground: 'hsl(var(--alert-foreground))'
 				},
 				muted: {
 					DEFAULT: 'hsl(var(--muted))',
@@ -51,6 +59,18 @@ export default {
 				card: {
 					DEFAULT: 'hsl(var(--card))',
 					foreground: 'hsl(var(--card-foreground))'
+				},
+				metro: {
+					green: 'hsl(var(--metro-green))',
+					blue: 'hsl(var(--metro-blue))',
+					red: 'hsl(var(--metro-red))',
+					white: 'hsl(var(--metro-white))'
+				},
+				status: {
+					online: 'hsl(var(--status-online))',
+					warning: 'hsl(var(--status-warning))',
+					offline: 'hsl(var(--status-offline))',
+					full: 'hsl(var(--status-full))'
 				},
 				sidebar: {
 					DEFAULT: 'hsl(var(--sidebar-background))',

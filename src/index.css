@@ -2,41 +2,78 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+/* GoMetro Design System - Johannesburg Metro Bus App */
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Core Metro Brand Colors */
+    --background: 0 0% 98%;
+    --foreground: 215 25% 15%;
 
+    /* Card System */
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 215 25% 15%;
 
+    /* Popover System */
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 215 25% 15%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    /* GoMetro Green - Safe/Go/Success */
+    --primary: 142 69% 45%;
+    --primary-foreground: 0 0% 100%;
+    --primary-light: 142 69% 55%;
+    --primary-dark: 142 69% 35%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    /* Metro Blue - Trust/Information */
+    --secondary: 212 85% 55%;
+    --secondary-foreground: 0 0% 100%;
+    --secondary-light: 212 85% 65%;
+    --secondary-dark: 212 85% 45%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    /* Neutral Tones */
+    --muted: 210 20% 95%;
+    --muted-foreground: 215 15% 55%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    /* Accent Colors */
+    --accent: 210 20% 95%;
+    --accent-foreground: 215 25% 15%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    /* Alert Red - Warnings/Full Capacity */
+    --destructive: 0 75% 55%;
+    --destructive-foreground: 0 0% 100%;
+    --alert: 0 75% 55%;
+    --alert-foreground: 0 0% 100%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    /* Interface Elements */
+    --border: 210 20% 88%;
+    --input: 210 20% 95%;
+    --ring: 142 69% 45%;
 
-    --radius: 0.5rem;
+    /* Custom GoMetro Variables */
+    --metro-green: 142 69% 45%;
+    --metro-blue: 212 85% 55%;
+    --metro-red: 0 75% 55%;
+    --metro-white: 0 0% 100%;
+    
+    /* Status Colors */
+    --status-online: 142 69% 45%;
+    --status-warning: 45 95% 55%;
+    --status-offline: 0 75% 55%;
+    --status-full: 0 75% 55%;
+    
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(var(--metro-green)), hsl(var(--primary-light)));
+    --gradient-secondary: linear-gradient(135deg, hsl(var(--metro-blue)), hsl(var(--secondary-light)));
+    --gradient-hero: linear-gradient(135deg, hsl(var(--metro-green)), hsl(var(--metro-blue)));
+    --gradient-card: linear-gradient(145deg, hsl(var(--card)), hsl(var(--muted)));
+    
+    /* Shadows */
+    --shadow-card: 0 4px 12px -2px hsl(var(--foreground) / 0.1);
+    --shadow-button: 0 2px 8px -1px hsl(var(--metro-green) / 0.3);
+    --shadow-float: 0 8px 24px -4px hsl(var(--foreground) / 0.15);
+    
+    /* Border Radius */
+    --radius: 1rem;
 
     --sidebar-background: 0 0% 98%;
 
@@ -100,6 +137,89 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans;
+  }
+}
+
+@layer components {
+  /* GoMetro Component Styles */
+  .metro-card {
+    @apply bg-card border border-border rounded-2xl p-6 shadow-[var(--shadow-card)];
+  }
+  
+  .metro-button-primary {
+    @apply bg-gradient-to-r from-primary to-primary-light text-primary-foreground font-semibold py-3 px-6 rounded-xl shadow-[var(--shadow-button)] transition-all duration-200 hover:scale-105 active:scale-95;
+  }
+  
+  .metro-button-secondary {
+    @apply bg-gradient-to-r from-secondary to-secondary-light text-secondary-foreground font-semibold py-3 px-6 rounded-xl shadow-[var(--shadow-button)] transition-all duration-200 hover:scale-105 active:scale-95;
+  }
+  
+  .metro-status-online {
+    @apply bg-status-online/10 text-status-online border border-status-online/20;
+  }
+  
+  .metro-status-warning {
+    @apply bg-status-warning/10 text-status-warning border border-status-warning/20;
+  }
+  
+  .metro-status-offline {
+    @apply bg-status-offline/10 text-status-offline border border-status-offline/20;
+  }
+  
+  .metro-gradient-hero {
+    background: var(--gradient-hero);
+  }
+  
+  .metro-gradient-card {
+    background: var(--gradient-card);
+  }
+  
+  /* Typography Classes */
+  .metro-heading {
+    @apply text-3xl font-bold text-foreground;
+  }
+  
+  .metro-subheading {
+    @apply text-xl font-semibold text-foreground;
+  }
+  
+  .metro-body {
+    @apply text-base text-muted-foreground;
+  }
+  
+  .metro-caption {
+    @apply text-sm text-muted-foreground;
+  }
+  
+  /* Animation Classes */
+  .metro-pulse {
+    animation: metro-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+  
+  .metro-fade-in {
+    animation: metro-fade-in 0.3s ease-out forwards;
+  }
+  
+  @keyframes metro-pulse {
+    0%, 100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.8;
+      transform: scale(1.02);
+    }
+  }
+  
+  @keyframes metro-fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 }
