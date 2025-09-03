@@ -1,57 +1,106 @@
 import React, { useState } from 'react';
-import { ModeSelector } from '@/components/ModeSelector';
+import { PhoneVerification } from '@/components/PhoneVerification';
+import { RoleSelection } from '@/components/RoleSelection';
+import { SignupForm } from '@/components/SignupForm';
 import { Dashboard } from '@/components/Dashboard';
 import { BusTracker } from '@/components/BusTracker';
 import { WalletCard } from '@/components/WalletCard';
 import { NewsCard } from '@/components/NewsCard';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { MapPin, CreditCard, Newspaper, Bus, Users, Settings } from 'lucide-react';
-import heroBg from '@/assets/hero-bg.jpg';
+import { MapPin, CreditCard, Newspaper, Bus, Settings } from 'lucide-react';
 
 type UserMode = 'commuter' | 'driver';
 type ActiveTab = 'dashboard' | 'map' | 'wallet' | 'news';
+type AppFlow = 'phone-verification' | 'role-selection' | 'signup' | 'dashboard';
+
+interface UserData {
+  fullName: string;
+  phoneNumber: string;
+  role: UserMode;
+  cardNumber?: string;
+  employeeNumber?: string;
+  isNewUser: boolean;
+}
 
 const Index = () => {
-  const [userMode, setUserMode] = useState<UserMode>('commuter');
+  const [currentFlow, setCurrentFlow] = useState<AppFlow>('phone-verification');
+  const [verifiedPhone, setVerifiedPhone] = useState('');
+  const [selectedRole, setSelectedRole] = useState<UserMode>('commuter');
+  const [userData, setUserData] = useState<UserData | null>(null);
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
-  const [isWelcomeScreen, setIsWelcomeScreen] = useState(true);
 
-  if (isWelcomeScreen) {
+  const handlePhoneVerification = (phoneNumber: string) => {
+    setVerifiedPhone(phoneNumber);
+    // Simulate checking if user already exists
+    const isReturningUser = Math.random() > 0.7; // 30% chance of being returning user for demo
+    
+    if (isReturningUser) {
+      // Simulate existing user data
+      const existingUserData: UserData = {
+        fullName: "John Doe",
+        phoneNumber,
+        role: Math.random() > 0.5 ? 'commuter' : 'driver',
+        cardNumber: "BC123456789",
+        isNewUser: false
+      };
+      setUserData(existingUserData);
+      setCurrentFlow('dashboard');
+    } else {
+      setCurrentFlow('role-selection');
+    }
+  };
+
+  const handleRoleSelection = (role: UserMode) => {
+    setSelectedRole(role);
+    setCurrentFlow('signup');
+  };
+
+  const handleSignupComplete = (newUserData: UserData) => {
+    setUserData(newUserData);
+    setCurrentFlow('dashboard');
+  };
+
+  const handleBackToRoleSelection = () => {
+    setCurrentFlow('role-selection');
+  };
+
+  const handleLogout = () => {
+    setCurrentFlow('phone-verification');
+    setVerifiedPhone('');
+    setSelectedRole('commuter');
+    setUserData(null);
+    setActiveTab('dashboard');
+  };
+
+  // Phone verification screen
+  if (currentFlow === 'phone-verification') {
+    return <PhoneVerification onVerificationComplete={handlePhoneVerification} />;
+  }
+
+  // Role selection screen
+  if (currentFlow === 'role-selection') {
     return (
-      <div className="min-h-screen relative overflow-hidden">
-        <div 
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-          style={{ backgroundImage: `url(${heroBg})` }}
-        />
-        <div className="absolute inset-0 metro-gradient-hero opacity-90" />
-        
-        <div className="relative z-10 min-h-screen flex flex-col items-center justify-center p-6 text-center">
-          <div className="metro-fade-in">
-            <div className="mb-8">
-              <Bus className="w-20 h-20 text-white mx-auto mb-4" />
-              <h1 className="text-5xl font-bold text-white mb-4">GoMetro</h1>
-              <p className="text-xl text-white/90 mb-8 max-w-md">
-                Your smart companion for Johannesburg Metro Bus travel
-              </p>
-            </div>
-            
-            <ModeSelector 
-              selectedMode={userMode}
-              onModeChange={setUserMode}
-            />
-            
-            <Button 
-              className="metro-button-primary text-lg px-12 py-4 mt-8"
-              onClick={() => setIsWelcomeScreen(false)}
-            >
-              Get Started
-            </Button>
-          </div>
-        </div>
-      </div>
+      <RoleSelection 
+        phoneNumber={verifiedPhone}
+        onRoleSelect={handleRoleSelection}
+      />
     );
   }
+
+  // Signup form screen
+  if (currentFlow === 'signup') {
+    return (
+      <SignupForm
+        role={selectedRole}
+        phoneNumber={verifiedPhone}
+        onSignupComplete={handleSignupComplete}
+        onBackToRoleSelection={handleBackToRoleSelection}
+      />
+    );
+  }
+
+  // Dashboard screen (existing functionality)
+  if (!userData) return null;
 
   const tabs = [
     { id: 'dashboard' as ActiveTab, label: 'Home', icon: Bus },
@@ -69,14 +118,16 @@ const Index = () => {
             <Bus className="w-8 h-8 text-primary" />
             <div>
               <h1 className="text-xl font-bold text-foreground">GoMetro</h1>
-              <p className="text-sm text-muted-foreground capitalize">{userMode} Mode</p>
+              <p className="text-sm text-muted-foreground capitalize">
+                {userData.role} Mode • {userData.fullName}
+              </p>
             </div>
           </div>
           
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setIsWelcomeScreen(true)}
+            onClick={handleLogout}
             className="text-muted-foreground"
           >
             <Settings className="w-5 h-5" />
@@ -86,7 +137,7 @@ const Index = () => {
 
       {/* Main Content */}
       <main className="flex-1 pb-20">
-        {activeTab === 'dashboard' && <Dashboard userMode={userMode} />}
+        {activeTab === 'dashboard' && <Dashboard userMode={userData.role} />}
         {activeTab === 'map' && <BusTracker />}
         {activeTab === 'wallet' && <WalletCard />}
         {activeTab === 'news' && <NewsCard />}
