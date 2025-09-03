@@ -37,24 +37,9 @@ const Index = () => {
   const [userData, setUserData] = useState<UserData | null>(null);
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
 
+  // Handlers stay the same...
   const handlePhoneVerification = (phoneNumber: string) => {
     setVerifiedPhone(phoneNumber);
-    // Simulate checking if user already exists
-    const isReturningUser = Math.random() > 0.7; // 30% chance of being returning user for demo
-    
-  /*  if (isReturningUser) {
-      // Simulate existing user data
-      const existingUserData: UserData = {
-        fullName: "John Doe",
-        phoneNumber,
-        role: Math.random() > 0.5 ? 'commuter' : 'driver',
-        cardNumber: "BC123456789",
-        isNewUser: false
-      };
-      setUserData(existingUserData);
-      setCurrentFlow('dashboard');
-    } */
-
     setCurrentFlow('role-selection');
   };
 
@@ -68,9 +53,7 @@ const Index = () => {
     setCurrentFlow('dashboard');
   };
 
-  const handleBackToRoleSelection = () => {
-    setCurrentFlow('role-selection');
-  };
+  const handleBackToRoleSelection = () => setCurrentFlow('role-selection');
 
   const handleLogout = () => {
     setCurrentFlow('phone-verification');
@@ -80,22 +63,20 @@ const Index = () => {
     setActiveTab('dashboard');
   };
 
-  // Phone verification screen
+  // --- FLOW HANDLING ---
   if (currentFlow === 'phone-verification') {
     return <PhoneVerification onVerificationComplete={handlePhoneVerification} />;
   }
 
-  // Role selection screen
   if (currentFlow === 'role-selection') {
     return (
-      <RoleSelection 
+      <RoleSelection
         phoneNumber={verifiedPhone}
         onRoleSelect={handleRoleSelection}
       />
     );
   }
 
-  // Signup form screen
   if (currentFlow === 'signup') {
     return (
       <SignupForm
@@ -107,145 +88,85 @@ const Index = () => {
     );
   }
 
-  // Dashboard screen (existing functionality)
-  if (!userData) return null;
+  // --- DASHBOARD (commuter vs driver) ---
+  if (currentFlow === 'dashboard' && userData) {
+    const commuterTabs = [
+      { id: 'dashboard' as ActiveTab, label: 'Home', icon: Bus },
+      { id: 'map' as ActiveTab, label: 'Track', icon: MapPin },
+      { id: 'wallet' as ActiveTab, label: 'Wallet', icon: CreditCard },
+      { id: 'news' as ActiveTab, label: 'News', icon: Newspaper },
+    ];
 
- // let mode: UserMode;
-  if (userData.role === 'commuter'){
-      const tabs = [
-    { id: 'dashboard' as ActiveTab, label: 'Home', icon: Bus },
-    { id: 'map' as ActiveTab, label: 'Track', icon: MapPin },
-    { id: 'wallet' as ActiveTab, label: 'Wallet', icon: CreditCard },
-    { id: 'news' as ActiveTab, label: 'News', icon: Newspaper },
-  ];
+    const driverTabs = [
+      { id: 'dashboard' as ActiveTab, label: 'Home', icon: Bus },
+      { id: 'news' as ActiveTab, label: 'News', icon: Newspaper },
+    ];
 
-  return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="bg-card border-b border-border px-4 py-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Bus className="w-8 h-8 text-primary" />
-            <div>
-              <h1 className="text-xl font-bold text-foreground">GoMetro</h1>
-              <p className="text-sm text-muted-foreground capitalize">
-                {userData.role} Mode • {userData.fullName}
-              </p>
+    const tabs = userData.role === 'commuter' ? commuterTabs : driverTabs;
+
+    return (
+      <div className="min-h-screen bg-background">
+        {/* Header */}
+        <header className="bg-card border-b border-border px-4 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Bus className="w-8 h-8 text-primary" />
+              <div>
+                <h1 className="text-xl font-bold text-foreground">GoMetro</h1>
+                <p className="text-sm text-muted-foreground capitalize">
+                  {userData.role} Mode • {userData.fullName}
+                </p>
+              </div>
             </div>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleLogout}
+              className="text-muted-foreground"
+            >
+              <Settings className="w-5 h-5" />
+            </Button>
           </div>
-          
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleLogout}
-            className="text-muted-foreground"
-          >
-            <Settings className="w-5 h-5" />
-          </Button>
-        </div>
-      </header>
+        </header>
 
-      {/* Main Content */}
-      <main className="flex-1 pb-20">
-        {activeTab === 'dashboard' && <Dashboard userMode={userData.role} />}
-        {activeTab === 'map' && <BusTracker  />}
-        {activeTab === 'wallet' && <WalletCard />}
-        {activeTab === 'news' && <NewsCard />}
-      </main>
+        {/* Main Content */}
+        <main className="flex-1 pb-20">
+          {activeTab === 'dashboard' && <Dashboard userMode={userData.role} />}
+          {userData.role === 'commuter' && activeTab === 'map' && <BusTracker />}
+          {userData.role === 'commuter' && activeTab === 'wallet' && <WalletCard />}
+          {activeTab === 'news' && <NewsCard />}
+        </main>
 
-      {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border">
-        <div className="flex items-center justify-around py-2">
-          {tabs.map((tab) => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-            
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex flex-col items-center gap-1 py-2 px-4 rounded-lg transition-all duration-200 ${
-                  isActive 
-                    ? 'bg-primary/10 text-primary' 
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                <Icon className="w-5 h-5" />
-                <span className="text-xs font-medium">{tab.label}</span>
-              </button>
-            );
-          })}
-        </div>
-      </nav>
-    </div>
-  );
-
+        {/* Bottom Navigation */}
+        <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border">
+          <div className="flex items-center justify-around py-2">
+            {tabs.map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex flex-col items-center gap-1 py-2 px-4 rounded-lg transition-all duration-200 ${
+                    isActive
+                      ? 'bg-primary/10 text-primary'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  <Icon className="w-5 h-5" />
+                  <span className="text-xs font-medium">{tab.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </nav>
+      </div>
+    );
   }
-  const tabs = [
-    { id: 'dashboard' as ActiveTab, label: 'Home', icon: Bus },
-    { id: 'news' as ActiveTab, label: 'News', icon: Newspaper },
-  ];
 
-  return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="bg-card border-b border-border px-4 py-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Bus className="w-8 h-8 text-primary" />
-            <div>
-              <h1 className="text-xl font-bold text-foreground">GoMetro</h1>
-              <p className="text-sm text-muted-foreground capitalize">
-                {userData.role} Mode • {userData.fullName}
-              </p>
-            </div>
-          </div>
-          
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleLogout}
-            className="text-muted-foreground"
-          >
-            <Settings className="w-5 h-5" />
-          </Button>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="flex-1 pb-20">
-        {activeTab === 'dashboard' && <Dashboard userMode={userData.role} />}
-        {activeTab === 'map' && <BusTracker  />}
-        {activeTab === 'wallet' && <WalletCard />}
-        {activeTab === 'news' && <NewsCard />}
-      </main>
-
-      {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border">
-        <div className="flex items-center justify-around py-2">
-          {tabs.map((tab) => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-            
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex flex-col items-center gap-1 py-2 px-4 rounded-lg transition-all duration-200 ${
-                  isActive 
-                    ? 'bg-primary/10 text-primary' 
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                <Icon className="w-5 h-5" />
-                <span className="text-xs font-medium">{tab.label}</span>
-              </button>
-            );
-          })}
-        </div>
-      </nav>
-    </div>
-  );
+  // Fallback if something unexpected
+  return <div className="flex items-center justify-center h-screen">Loading...</div>;
 };
 
 export default Index;
