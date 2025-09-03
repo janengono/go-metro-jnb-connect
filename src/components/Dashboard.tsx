@@ -1,7 +1,8 @@
 import React from 'react';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle  } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { StatusIndicator } from '@/components/StatusIndicator';
+import QuickReport from "@/components/QuickReport";
 import { 
   Bus, 
   Clock, 
@@ -111,21 +112,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode }) => {
         </Card>
 
         {/* Quick Actions */}
-        <Card className="metro-card">
-          <h3 className="metro-subheading mb-4">Quick Actions</h3>
-          
-          <div className="grid grid-cols-2 gap-3">
-            <Button variant="outline" className="flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4" />
-              Report Issue
-            </Button>
-            
-            <Button variant="outline" className="flex items-center gap-2">
-              <Clock className="w-4 h-4" />
-              Log Delay
-            </Button>
-          </div>
-        </Card>
+            <Card className="card-elevated animate-slide-up">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-warning" />
+                Quick Actions
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <QuickReport userMode={userMode} />
+            </CardContent>
+          </Card>
       </div>
     );
   }
@@ -194,21 +191,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode }) => {
       </Card>
 
       {/* Quick Actions */}
-      <Card className="metro-card">
-        <h3 className="metro-subheading mb-4">Quick Actions</h3>
-        
-        <div className="grid grid-cols-2 gap-3">
-          <Button variant="outline" className="flex items-center gap-2">
-            <MapPin className="w-4 h-4" />
-            Find Stop
-          </Button>
-          
-          <Button variant="outline" className="flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4" />
-            Report Issue
-          </Button>
-        </div>
-      </Card>
+          <Card className="card-elevated animate-slide-up">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-warning" />
+                Quick Actions
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <QuickReport userMode={userMode} />
+            </CardContent>
+          </Card>
     </div>
   );
 };

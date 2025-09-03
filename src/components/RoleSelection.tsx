@@ -38,7 +38,7 @@ export const RoleSelection: React.FC<RoleSelectionProps> = ({ phoneNumber, onRol
           </div>
           <h1 className="text-3xl font-bold mb-2">Choose Your Role</h1>
           <p className="text-muted-foreground">
-            How will you be using GoMetro today?
+            How will you be using GoMetro?
           </p>
           <p className="text-sm text-muted-foreground mt-1">
             Verified: {phoneNumber}
