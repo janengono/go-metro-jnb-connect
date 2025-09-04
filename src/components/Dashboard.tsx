@@ -8,15 +8,13 @@ import QuickReport from "@/components/QuickReport";
 import {
   Bus,
   Clock,
-  MapPin,
   Plus,
   Users,
   AlertTriangle,
-  CreditCard,
   TrendingUp,
   Navigation,
 } from "lucide-react";
-import { auth, db } from "../lib/firebase";
+import { db } from "../lib/firebase";
 import {
   collection,
   query,
@@ -26,29 +24,28 @@ import {
   updateDoc,
   onSnapshot as onDocSnapshot,
   DocumentData,
-  getDocs,
 } from "firebase/firestore";
 import { useAuth } from "../context/AuthContext";
 import { VirtualCard } from "@/components/VirtualCard";
 
 type UserMode = "commuter" | "driver";
 
-type BusType = {
+interface BusType {
   id: string;
   bus_number: string;
   route_id: string;
   capacity: number;
   current_capacity: number;
   status: string;
-};
+}
 
-type RouteType = {
+interface RouteType {
   id: string;
   route_name: string;
   start_point: string;
   end_point: string;
   stops: string[];
-};
+}
 
 interface UserData {
   fullName: string;
@@ -64,6 +61,14 @@ interface DashboardProps {
   userData: UserData;
 }
 
+interface ReportType {
+  busId: string;
+  type: string;
+  details: string;
+  timestamp: string;
+  reporterId?: string | null;
+}
+
 export const Dashboard: React.FC<DashboardProps> = ({ userMode, userData }) => {
   const { user } = useAuth();
   const [bus, setBus] = useState<BusType | null>(null);
@@ -74,11 +79,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode, userData }) => {
   const [showTopUp, setShowTopUp] = useState(false);
   const [nearbyBuses, setNearbyBuses] = useState<BusType[]>([]);
   const [selectedBus, setSelectedBus] = useState<BusType | null>(null);
+  const [currentReport, setCurrentReport] = useState<ReportType | null>(null);
 
   const quickAmounts = [50, 100, 200, 300];
   const driverId = user?.uid;
 
-  // Capacity update for driver bus
+  // ---------------- DRIVER: Capacity update ----------------
   const handleCapacityUpdate = async () => {
     if (!bus || newCapacity === "") return;
     try {
@@ -93,7 +99,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode, userData }) => {
     }
   };
 
-  // Subscribe to bus assigned to driver
+  // ---------------- DRIVER: Subscribe to assigned bus ----------------
   useEffect(() => {
     if (!driverId) return;
     const q = query(collection(db, "buses"), where("driver_id", "==", driverId));
@@ -119,7 +125,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode, userData }) => {
     return () => unsub();
   }, [driverId]);
 
-  // Subscribe to route doc for driver bus
+  // ---------------- DRIVER: Subscribe to route ----------------
   useEffect(() => {
     if (!bus?.route_id) return;
     const unsub = onDocSnapshot(doc(db, "routes", bus.route_id), (snap) => {
@@ -139,12 +145,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode, userData }) => {
     return () => unsub();
   }, [bus?.route_id]);
 
-  // -------------------- COMMUTER: Subscribe to nearby buses real-time -------------------
+  // ---------------- COMMUTER: Nearby buses ----------------
   useEffect(() => {
     if (userMode !== "commuter") return;
-
-    // Example approach: Query buses that are "active" or in certain proximity (customize as needed)
-    // For demo, subscribe to all buses; filter by proximity could be added here.
     const q = query(collection(db, "buses"));
     const unsub = onSnapshot(q, (snapshot) => {
       const buses: BusType[] = snapshot.docs.map((doc) => {
@@ -159,11 +162,27 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode, userData }) => {
         };
       });
       setNearbyBuses(buses);
-      // Optionally auto-select the first bus on list
       if (buses.length > 0 && !selectedBus) setSelectedBus(buses[0]);
     });
     return () => unsub();
   }, [userMode, selectedBus]);
+
+  // ---------------- Subscribe to latest report ----------------
+  useEffect(() => {
+    const targetBusId = userMode === "driver" ? bus?.id : selectedBus?.id;
+    if (!targetBusId) return;
+
+    const reportRef = doc(db, "reports", targetBusId);
+    const unsub = onDocSnapshot(reportRef, (snap) => {
+      if (!snap.exists()) {
+        setCurrentReport(null);
+        return;
+      }
+      const data = snap.data() as ReportType;
+      setCurrentReport(data);
+    });
+    return () => unsub();
+  }, [bus?.id, selectedBus?.id, userMode]);
 
   if (loading) return <div className="p-6">Loading dashboard…</div>;
 
@@ -251,6 +270,23 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode, userData }) => {
           </div>
         </Card>
 
+        {/* Last Report */}
+        {currentReport && (
+          <Card className="metro-card mt-4">
+            <h3 className="metro-subheading mb-2">Last Report</h3>
+            <p>
+              <strong>Type:</strong> {currentReport.type}
+            </p>
+            <p>
+              <strong>Details:</strong> {currentReport.details}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              <strong>Reported at:</strong>{" "}
+              {new Date(currentReport.timestamp).toLocaleString()}
+            </p>
+          </Card>
+        )}
+
         {/* Quick Actions */}
         <Card className="card-elevated animate-slide-up">
           <CardHeader>
@@ -260,7 +296,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode, userData }) => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <QuickReport userMode={userMode} bus={bus} />
+            <QuickReport userMode={userMode} bus={bus} user={user} />
           </CardContent>
         </Card>
       </div>
@@ -289,8 +325,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode, userData }) => {
           </Button>
         </div>
       </Card>
-
-      
 
       {/* Top-Up Modal */}
       {showTopUp && (
@@ -332,7 +366,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode, userData }) => {
               </div>
             </div>
 
-            {/* Google Pay button container */}
             <div className="flex justify-center mt-4">
               {topUpAmount && topUpAmount >= 50 ? (
                 <TopUp topUpAmount={topUpAmount} onClose={() => setShowTopUp(false)} />
@@ -354,10 +387,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode, userData }) => {
             variant="ghost"
             size="sm"
             className="text-primary"
-            onClick={() => {
-              // Manual refresh - Could refetch realtime or force update by resetting nearbyBuses
-              // For now, no-op as onSnapshot is live
-            }}
+            onClick={() => {}}
           >
             Refresh
           </Button>
@@ -378,20 +408,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode, userData }) => {
                 </div>
                 <div>
                   <p className="font-semibold text-foreground">Bus {bus.bus_number}</p>
-                  {/* Optionally fetch route name */}
-                  <p className="text-sm text-muted-foreground">
-                    Route: {/* could fetch & show route_name here */}
-                    {bus.route_id}
-                  </p>
+                  <p className="text-sm text-muted-foreground">Route: {bus.route_id}</p>
                 </div>
               </div>
               <div className="text-right">
                 <div className="flex items-center gap-2 mb-1">
                   <Clock className="w-4 h-4 text-muted-foreground" />
-                  <span className="font-medium text-foreground">
-                    {/* For simplicity, static ETA shown or can be extended */}
-                    ETA unknown
-                  </span>
+                  <span className="font-medium text-foreground">ETA unknown</span>
                 </div>
                 <StatusIndicator status={bus.status as "online" | "warning" | "offline"} />
               </div>
@@ -400,7 +423,24 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode, userData }) => {
         </div>
       </Card>
 
-      {/* Quick Actions with selected bus */}
+      {/* Last Report */}
+      {currentReport && (
+        <Card className="metro-card mt-4">
+          <h3 className="metro-subheading mb-2">Last Report</h3>
+          <p>
+            <strong>Type:</strong> {currentReport.type}
+          </p>
+          <p>
+            <strong>Details:</strong> {currentReport.details}
+          </p>
+          <p className="text-sm text-muted-foreground">
+            <strong>Reported at:</strong>{" "}
+            {new Date(currentReport.timestamp).toLocaleString()}
+          </p>
+        </Card>
+      )}
+
+      {/* Quick Actions */}
       <Card className="card-elevated animate-slide-up">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -409,8 +449,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode, userData }) => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {/* Pass selectedBus so commuter can report on specific bus */}
-          <QuickReport userMode={userMode} bus={selectedBus} />
+          {selectedBus && (
+            <QuickReport userMode={userMode} bus={selectedBus} user={user} />
+          )}
         </CardContent>
       </Card>
     </div>

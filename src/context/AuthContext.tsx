@@ -4,7 +4,7 @@ import { auth, db } from "../lib/firebase";
 import { doc, getDoc,updateDoc } from "firebase/firestore";
 
 // Firestore schema for users
-type FirestoreUser = {
+export type FirestoreUser = {
   full_name: string;
   role: "driver" | "commuter" | "admin";
   phone_number?: string;
@@ -13,11 +13,11 @@ type FirestoreUser = {
   balance?: number;
 };
 
-type AppUser = {
+export type AppUser = {
   uid: string;
   role: "driver" | "commuter" | "admin";
   full_name: string;
-  employee_number:string;
+  employee_number: string;
 };
 
 const AuthCtx = createContext<{ user: AppUser | null; loading: boolean }>({
