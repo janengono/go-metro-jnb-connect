@@ -8,6 +8,7 @@ import { WalletCard } from '@/components/WalletCard';
 import { NewsCard } from '@/components/NewsCard';
 import { Button } from '@/components/ui/button';
 import {ProfileDropdown}   from '@/components/ui/profile-dropdown';
+import { auth, db } from "../lib/firebase";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -37,7 +38,6 @@ const Index = () => {
   const [userData, setUserData] = useState<UserData | null>(null);
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
 
-  // Handlers stay the same...
   const handlePhoneVerification = (phoneNumber: string) => {
     setVerifiedPhone(phoneNumber);
     // Simulate checking if user already exists
@@ -69,7 +69,9 @@ const Index = () => {
     setCurrentFlow('dashboard');
   };
 
-  const handleBackToRoleSelection = () => setCurrentFlow('role-selection');
+  const handleBackToRoleSelection = () => {
+    setCurrentFlow('role-selection');
+  };
 
   const handleLogout = () => {
     setCurrentFlow('phone-verification');
@@ -89,15 +91,17 @@ const Index = () => {
     return <PhoneVerification onVerificationComplete={handlePhoneVerification} />;
   }
 
+  // Role selection screen
   if (currentFlow === 'role-selection') {
     return (
-      <RoleSelection
+      <RoleSelection 
         phoneNumber={verifiedPhone}
         onRoleSelect={handleRoleSelection}
       />
     );
   }
 
+  // Signup form screen
   if (currentFlow === 'signup') {
     return (
       <SignupForm
@@ -109,14 +113,17 @@ const Index = () => {
     );
   }
 
-  // --- DASHBOARD (commuter vs driver) ---
-  if (currentFlow === 'dashboard' && userData) {
-    const commuterTabs = [
-      { id: 'dashboard' as ActiveTab, label: 'Home', icon: Bus },
-      { id: 'map' as ActiveTab, label: 'Track', icon: MapPin },
-      { id: 'wallet' as ActiveTab, label: 'Wallet', icon: CreditCard },
-      { id: 'news' as ActiveTab, label: 'News', icon: Newspaper },
-    ];
+  // Dashboard screen (existing functionality)
+  if (!userData) return null;
+
+ // let mode: UserMode;
+  if (userData.role === 'commuter'){
+      const tabs = [
+    { id: 'dashboard' as ActiveTab, label: 'Home', icon: Bus },
+    { id: 'map' as ActiveTab, label: 'Track', icon: MapPin },
+    { id: 'wallet' as ActiveTab, label: 'Wallet', icon: CreditCard },
+    { id: 'news' as ActiveTab, label: 'News', icon: Newspaper },
+  ];
 
   return (
     <div className="min-h-screen bg-background">
@@ -211,7 +218,7 @@ const Index = () => {
             onLogout={handleLogout}
             onViewProfile={() => {/* Add view profile logic */}}
             onEditProfile={() => {/* Add edit profile logic */}}
-            onReportCard={undefined}
+            onReportCard={handleReportCard}//undefined
             trigger={
               <Button
                 variant="ghost"
@@ -233,35 +240,32 @@ const Index = () => {
         {activeTab === 'news' && <NewsCard />}
       </main>
 
-        {/* Bottom Navigation */}
-        <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border">
-          <div className="flex items-center justify-around py-2">
-            {tabs.map((tab) => {
-              const Icon = tab.icon;
-              const isActive = activeTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`flex flex-col items-center gap-1 py-2 px-4 rounded-lg transition-all duration-200 ${
-                    isActive
-                      ? 'bg-primary/10 text-primary'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  <Icon className="w-5 h-5" />
-                  <span className="text-xs font-medium">{tab.label}</span>
-                </button>
-              );
-            })}
-          </div>
-        </nav>
-      </div>
-    );
-  }
-
-  // Fallback if something unexpected
-  return <div className="flex items-center justify-center h-screen">Loading...</div>;
+      {/* Bottom Navigation */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border">
+        <div className="flex items-center justify-around py-2">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex flex-col items-center gap-1 py-2 px-4 rounded-lg transition-all duration-200 ${
+                  isActive 
+                    ? 'bg-primary/10 text-primary' 
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <Icon className="w-5 h-5" />
+                <span className="text-xs font-medium">{tab.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </nav>
+    </div>
+  );
 };
 
 export default Index;

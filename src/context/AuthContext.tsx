@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { onAuthStateChanged, User } from "firebase/auth";
 import { auth, db } from "../lib/firebase";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc,updateDoc } from "firebase/firestore";
 
 // Firestore schema for users
 type FirestoreUser = {
@@ -44,12 +44,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      const data = snap.data() as FirestoreUser;*/
+      const data = snap.data() as FirestoreUser;
 
-      /*setUser({
+      setUser({
         uid: fbUser.uid,
         role: data.role,
-        full_name: data.full_name ?? "",
+        full_name: data.full_name,
+        employee_number:data.employee_number,
       });
 
       setLoading(false);
@@ -62,7 +63,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         
     });
     setLoading(false);
-    //});
     //return () => unsub();
   }, []);
 

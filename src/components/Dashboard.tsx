@@ -5,12 +5,13 @@ import { Button } from "@/components/ui/button";
 import { StatusIndicator } from "@/components/StatusIndicator";
 import QuickReport from "@/components/QuickReport";
 import { Bus, Clock, Users, AlertTriangle, CreditCard, TrendingUp, Navigation } from "lucide-react";
-import { db } from "../lib/firebase";
-import { collection, query, where, onSnapshot, doc, onSnapshot as onDocSnapshot, DocumentData } from "firebase/firestore";
+import {auth, db } from "../lib/firebase";
+import { collection, query, where, onSnapshot, doc,updateDoc, onSnapshot as onDocSnapshot, DocumentData } from "firebase/firestore";
 import { useAuth } from "../context/AuthContext";
 
 
 type UserMode = "commuter" | "driver";
+import { VirtualCard } from '@/components/VirtualCard';
 
 type BusType = {
   id: string;
@@ -29,6 +30,15 @@ type RouteType = {
   stops: string[];
 };
 
+interface UserData {
+  fullName: string;
+  phoneNumber: string;
+  role: UserMode;
+  cardNumber?: string;
+  employeeNumber?: string;
+  isNewUser: boolean;
+}
+
 interface DashboardProps {
   userMode: UserMode;
   userData: UserData;
@@ -39,17 +49,37 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode }) => {
   const [bus, setBus] = useState<BusType | null>(null);
   const [route, setRoute] = useState<RouteType | null>(null);
   const [loading, setLoading] = useState(true);
+  const [newCapacity, setNewCapacity] = useState<number | "">("");
+
+
 
   const driverId = user?.uid;
 
 
   console.log("Auth user:", user);
 
+  const handleCapacityUpdate = async () => {
+    if (!bus || newCapacity === "") return;
+      try {
+        const updated = Number(newCapacity);
+        await updateDoc(doc(db, "buses", bus.id), {
+          current_capacity:updated,
+        });
+        setBus({ ...bus, current_capacity: updated });
+
+        setNewCapacity(""); // reset input
+      } catch (err) {
+        console.error("Error updating capacity:", err);
+      }
+    };
+
   // Subscribe to bus assigned to driver
   useEffect(() => {
     if (!driverId) return;
     const q = query(collection(db, "buses"), where("driver_id", "==", driverId));
     const unsub = onSnapshot(q, (snap) => {
+      console.log("Bus snapshot updated:", snap.docs.map(d => d.data())); // 👈 add this
+      
       if (snap.empty) {
         setBus(null);
         setRoute(null);
@@ -151,7 +181,20 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode }) => {
             </div>
           </div>
 
-          <Button className="metro-button-primary w-full mt-4">Update Capacity</Button>
+          <div className="mt-4 space-y-3">
+            <input
+              type="number"
+              min={0}
+              max={bus.capacity}
+              value={newCapacity}
+              onChange={(e) => setNewCapacity(Number(e.target.value))}
+              placeholder="Enter new capacity"
+              className="w-full p-2 border rounded-lg bg-background"
+            />
+
+          <Button className="metro-button-primary w-full mt-4"
+          onClick={handleCapacityUpdate} disabled={newCapacity === ""}>Update Capacity</Button>
+          </div>
         </Card>
 
         {/* Quick Actions */}
@@ -222,7 +265,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode }) => {
                   <Clock className="w-4 h-4 text-muted-foreground" />
                   <span className="font-medium text-foreground">{bus.eta}</span>
                 </div>
-                <StatusIndicator status={bus.status} capacity={bus.capacity} />
+                <StatusIndicator status={bus.status} /*capacity={bus.capacity}*/ />
               </div>
             </div>
           ))}
