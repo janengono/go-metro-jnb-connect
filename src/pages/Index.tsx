@@ -159,7 +159,7 @@ const Index = () => {
 
       {/* Main Content */}
       <main className="flex-1 pb-20">
-        {activeTab === 'dashboard' && <Dashboard userMode={userData.role} />}
+        {activeTab === 'dashboard' && <Dashboard userMode={userData.role} userData={userData} />}
         {activeTab === 'map' && <BusTracker  />}
         {activeTab === 'wallet' && <WalletCard />}
         {activeTab === 'news' && <NewsCard />}
@@ -233,7 +233,7 @@ const Index = () => {
 
       {/* Main Content */}
       <main className="flex-1 pb-20">
-        {activeTab === 'dashboard' && <Dashboard userMode={userData.role} />}
+        {activeTab === 'dashboard' && <Dashboard userMode={userData.role} userData={userData} />}
         {activeTab === 'map' && <BusTracker  />}
         {activeTab === 'wallet' && <WalletCard />}
         {activeTab === 'news' && <NewsCard />}

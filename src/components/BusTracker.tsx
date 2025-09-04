@@ -3,6 +3,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { StatusIndicator } from '@/components/StatusIndicator';
+import { BusMap } from '@/components/BusMap';
 import { 
   MapPin, 
   Navigation, 
@@ -10,7 +11,8 @@ import {
   Bus, 
   Clock,
   LocateFixed,
-  Filter
+  Filter,
+  Route
 } from 'lucide-react';
 
 interface BusLocation {
@@ -91,23 +93,17 @@ export const BusTracker: React.FC = () => {
         </div>
       </Card>
 
-      {/* Map Placeholder */}
+      {/* Real-time Bus Map */}
       <Card className="metro-card">
-        <div className="h-64 bg-muted/30 rounded-xl flex items-center justify-center relative overflow-hidden">
-          {/* Simulated Map Background */}
-          <div className="absolute inset-0 bg-gradient-to-br from-secondary/20 to-primary/20" />
-          
-          <div className="relative z-10 text-center">
-            <MapPin className="w-12 h-12 text-primary mx-auto mb-3" />
-            <p className="metro-subheading mb-2">Live Bus Tracking</p>
-            <p className="metro-body">Interactive map will load here</p>
-          </div>
-
-          {/* Simulated Bus Markers */}
-          <div className="absolute top-4 left-8 w-3 h-3 bg-primary rounded-full metro-pulse" />
-          <div className="absolute top-12 right-16 w-3 h-3 bg-secondary rounded-full metro-pulse" style={{ animationDelay: '0.5s' }} />
-          <div className="absolute bottom-8 left-1/3 w-3 h-3 bg-status-warning rounded-full metro-pulse" style={{ animationDelay: '1s' }} />
+        <div className="mb-4">
+          <h2 className="metro-subheading">Live Bus Tracking</h2>
+          <p className="text-sm text-muted-foreground">Tap any bus to see its full route</p>
         </div>
+        <BusMap 
+          buses={filteredBuses}
+          onBusSelect={setSelectedBus}
+          selectedBus={selectedBus}
+        />
       </Card>
 
       {/* Active Buses List */}
@@ -188,9 +184,16 @@ export const BusTracker: React.FC = () => {
             </div>
           </div>
           
-          <Button className="metro-button-primary w-full mt-4">
-            Get Directions
-          </Button>
+          <div className="flex gap-2 mt-4">
+            <Button className="metro-button-primary flex-1">
+              <Route className="w-4 h-4 mr-2" />
+              View Full Route
+            </Button>
+            <Button variant="outline" className="flex-1">
+              <Navigation className="w-4 h-4 mr-2" />
+              Directions
+            </Button>
+          </div>
         </Card>
       )}
     </div>

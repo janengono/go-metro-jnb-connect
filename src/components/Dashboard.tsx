@@ -17,11 +17,21 @@ import { VirtualCard } from '@/components/VirtualCard';
 
 type UserMode = 'commuter' | 'driver';
 
-interface DashboardProps {
-  userMode: UserMode;
+interface UserData {
+  fullName: string;
+  phoneNumber: string;
+  role: UserMode;
+  cardNumber?: string;
+  employeeNumber?: string;
+  isNewUser: boolean;
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({ userMode }) => {
+interface DashboardProps {
+  userMode: UserMode;
+  userData: UserData;
+}
+
+export const Dashboard: React.FC<DashboardProps> = ({ userMode, userData }) => {
   const nearbyBuses = [
     { 
       number: '243', 
@@ -133,9 +143,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode }) => {
       {/* Virtual Card */}
       <div className="flex justify-center">
         <VirtualCard
-          cardNumber="9027001100065679"
+          cardNumber={userData.cardNumber || "0000000000000000"}
           balance={87.50}
-          holderName="John Doe"
+          holderName={userData.fullName}
           className="mb-2"
         />
       </div>
