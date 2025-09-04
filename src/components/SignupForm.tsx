@@ -4,8 +4,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { User, CreditCard, IdCard, Phone, AlertCircle, CheckCircle } from 'lucide-react';
+import { User, CreditCard, IdCard, Phone, AlertCircle, CheckCircle, QrCode } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { QRScanner } from '@/components/QRScanner';
+import cityBackground from '@/assets/city-background.jpg';
 
 type UserRole = 'commuter' | 'driver';
 
@@ -82,8 +84,16 @@ export const SignupForm: React.FC<SignupFormProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
+    <div 
+      className="min-h-screen flex items-center justify-center p-4 relative"
+      style={{
+        backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), url(${cityBackground})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat'
+      }}
+    >
+      <Card className="w-full max-w-md backdrop-blur-sm bg-card/95">
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
             {role === 'commuter' ? (
@@ -125,19 +135,35 @@ export const SignupForm: React.FC<SignupFormProps> = ({
             {role === 'commuter' ? (
               <div className="space-y-2">
                 <Label htmlFor="cardNumber">Card Number</Label>
-                <div className="relative">
-                  <CreditCard className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="cardNumber"
-                    type="text"
-                    placeholder="Enter your bus card number"
-                    value={cardNumber}
-                    onChange={(e) => setCardNumber(e.target.value)}
-                    disabled={isLoading}
-                    className="pl-10"
-                    required
-                  />
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <CreditCard className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="cardNumber"
+                      type="text"
+                      placeholder="Enter your bus card number"
+                      value={cardNumber}
+                      onChange={(e) => setCardNumber(e.target.value)}
+                      disabled={isLoading}
+                      className="pl-10"
+                      required
+                    />
+                  </div>
+                  <QRScanner onScanResult={setCardNumber}>
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      size="icon"
+                      className="shrink-0"
+                      disabled={isLoading}
+                    >
+                      <QrCode className="w-4 h-4" />
+                    </Button>
+                  </QRScanner>
                 </div>
+                <p className="text-xs text-muted-foreground">
+                  Scan the QR code on your physical bus card or enter manually
+                </p>
               </div>
             ) : (
               <div className="space-y-2">

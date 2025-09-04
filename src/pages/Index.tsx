@@ -79,8 +79,13 @@ const Index = () => {
     setActiveTab('dashboard');
   };
 
-  // --- FLOW HANDLING ---
-   if (currentFlow === 'phone-verification') {
+  const handleReportCard = () => {
+    // Show alert for demo purposes
+    alert('Report Lost/Stolen Card feature would be implemented here');
+  };
+
+  // Phone verification screen
+  if (currentFlow === 'phone-verification') {
     return <PhoneVerification onVerificationComplete={handlePhoneVerification} />;
   }
 
@@ -113,46 +118,120 @@ const Index = () => {
       { id: 'news' as ActiveTab, label: 'News', icon: Newspaper },
     ];
 
-    const driverTabs = [
-      { id: 'dashboard' as ActiveTab, label: 'Home', icon: Bus },
-      { id: 'news' as ActiveTab, label: 'News', icon: Newspaper },
-    ];
-
-    const tabs = userData.role === 'commuter' ? commuterTabs : driverTabs;
-
-    return (
-      <div className="min-h-screen bg-background">
-        {/* Header */}
-        <header className="bg-card border-b border-border px-4 py-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Bus className="w-8 h-8 text-primary" />
-              <div>
-                <h1 className="text-xl font-bold text-foreground">GoMetro</h1>
-                <p className="text-sm text-muted-foreground capitalize">
-                  {userData.role} Mode • {userData.fullName}
-                </p>
-              </div>
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="bg-card border-b border-border px-4 py-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Bus className="w-8 h-8 text-primary" />
+            <div>
+              <h1 className="text-xl font-bold text-foreground">GoMetro</h1>
+              <p className="text-sm text-muted-foreground capitalize">
+                {userData.role} Mode • {userData.fullName}
+              </p>
             </div>
-
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleLogout}
-              className="text-muted-foreground"
-            >
-              <Settings className="w-5 h-5" />
-            </Button>
           </div>
-        </header>
+          
+          <ProfileDropdown
+            onLogout={handleLogout}
+            onViewProfile={() => {/* Add view profile logic */}}
+            onEditProfile={() => {/* Add edit profile logic */}}
+            onReportCard={handleReportCard}
+            trigger={
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-muted-foreground"
+              >
+                <Settings className="w-5 h-5" />
+              </Button>
+            }
+          />
+        </div>
+      </header>
 
-        {/* Main Content */}
-        <main className="flex-1 pb-20">
-          {activeTab === 'dashboard' && <Dashboard userMode={userData.role} />}
-          {userData.role === 'commuter' && activeTab === 'map' && <BusTracker />}
-          {userData.role === 'commuter' && activeTab === 'wallet' && <WalletCard />}
-          {activeTab === 'news' && <NewsCard />}
-        </main>
+      {/* Main Content */}
+      <main className="flex-1 pb-20">
+        {activeTab === 'dashboard' && <Dashboard userMode={userData.role} userData={userData} />}
+        {activeTab === 'map' && <BusTracker  />}
+        {activeTab === 'wallet' && <WalletCard />}
+        {activeTab === 'news' && <NewsCard />}
+      </main>
+
+      {/* Bottom Navigation */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border">
+        <div className="flex items-center justify-around py-2">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex flex-col items-center gap-1 py-2 px-4 rounded-lg transition-all duration-200 ${
+                  isActive 
+                    ? 'bg-primary/10 text-primary' 
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <Icon className="w-5 h-5" />
+                <span className="text-xs font-medium">{tab.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </nav>
+    </div>
+  );
+
+  }
+  const tabs = [
+    { id: 'dashboard' as ActiveTab, label: 'Home', icon: Bus },
+    { id: 'news' as ActiveTab, label: 'News', icon: Newspaper },
+  ];
+
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="bg-card border-b border-border px-4 py-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Bus className="w-8 h-8 text-primary" />
+            <div>
+              <h1 className="text-xl font-bold text-foreground">GoMetro</h1>
+              <p className="text-sm text-muted-foreground capitalize">
+                {userData.role} Mode • {userData.fullName}
+              </p>
+            </div>
+          </div>
+          
+          <ProfileDropdown
+            onLogout={handleLogout}
+            onViewProfile={() => {/* Add view profile logic */}}
+            onEditProfile={() => {/* Add edit profile logic */}}
+            onReportCard={undefined}
+            trigger={
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-muted-foreground"
+              >
+                <Settings className="w-5 h-5" />
+              </Button>
+            }
+          />
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="flex-1 pb-20">
+        {activeTab === 'dashboard' && <Dashboard userMode={userData.role} userData={userData} />}
+        {activeTab === 'map' && <BusTracker  />}
+        {activeTab === 'wallet' && <WalletCard />}
+        {activeTab === 'news' && <NewsCard />}
+      </main>
 
         {/* Bottom Navigation */}
         <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border">

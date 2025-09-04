@@ -31,6 +31,7 @@ type RouteType = {
 
 interface DashboardProps {
   userMode: UserMode;
+  userData: UserData;
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({ userMode }) => {
