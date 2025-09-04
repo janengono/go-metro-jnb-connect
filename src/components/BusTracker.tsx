@@ -1,77 +1,71 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import  RouterTracker  from '@/components/map'
 import { StatusIndicator } from '@/components/StatusIndicator';
-import { BusMap } from '@/components/BusMap';
 import { 
-  MapPin, Navigation, Search, Bus, Clock, LocateFixed, Filter, Route 
+  MapPin, 
+  Navigation, 
+  Search, 
+  Bus, 
+  Clock,
+  LocateFixed,
+  Filter
 } from 'lucide-react';
-import { db } from '../lib/firebase';
-import { collection, onSnapshot, DocumentData } from 'firebase/firestore';
-
-type BusStatus = 'online' | 'warning' | 'offline'|'full';
 
 interface BusLocation {
   id: string;
   number: string;
-  route_id: string;
-  route_name: string;
+  route: string;
   lat: number;
   lng: number;
   capacity: number;
-  current_capacity: number;
   eta: string;
-  status: BusStatus;
+  status: 'online' | 'warning' | 'offline';
 }
+let data = null
 
 export const BusTracker: React.FC = () => {
   const [searchRoute, setSearchRoute] = useState('');
   const [selectedBus, setSelectedBus] = useState<BusLocation | null>(null);
-  const [activeBuses, setActiveBuses] = useState<BusLocation[]>([]);
 
-  useEffect(() => {
-    const unsub = onSnapshot(collection(db, 'buses'), (snapshot) => {
-      const buses: BusLocation[] = snapshot.docs.map((doc) => {
-        const data = doc.data() as DocumentData;
-        const capacityRatio = data.current_capacity / data.capacity;
-
-
-        let status: BusStatus;
-
-        if (data.status === 'offline') {
-          status = 'offline';
-        } else if (capacityRatio > 1.2) {
-          status = 'warning';   // Overcapacity (more than 80%)
-        } else if (capacityRatio >= 1) {
-          status = 'full';      // Full (60% to 80%)
-        } else {
-          status = 'online';    // Available (less than 60%)
-        }
-
-
-
-        return {
-          id: doc.id,
-          number: data.bus_number,
-          route_id: data.route_id,
-          route_name: data.route_name,
-          lat: data.lat ?? 0,
-          lng: data.lng ?? 0,
-          capacity: data.capacity,
-          current_capacity: data.current_capacity,
-          eta: data.eta ?? 'N/A',
-          status,
-        };
-      });
-      setActiveBuses(buses);
-    });
-    return () => unsub();
-  }, []);
+  const activeBuses: BusLocation[] = [
+    {
+      id: '1',
+      number: '243',
+      route: 'Sandton → Soweto',
+      lat: -26.1076,
+      lng: 28.0567,
+      capacity: 85,
+      eta: '3 min',
+      status: 'online'
+    },
+    {
+      id: '2',
+      number: '156',
+      route: 'Rosebank → Alexandra',
+      lat: -26.1465,
+      lng: 28.0436,
+      capacity: 45,
+      eta: '7 min',
+      status: 'online'
+    },
+    {
+      id: '3',
+      number: '089',
+      route: 'CBD → Midrand',
+      lat: -26.2041,
+      lng: 28.0473,
+      capacity: 95,
+      eta: '12 min',
+      status: 'warning'
+    }
+  ];
 
   const filteredBuses = activeBuses.filter(bus =>
     bus.number.includes(searchRoute) || 
-    bus.route_name.toLowerCase().includes(searchRoute.toLowerCase())
+    bus.route.toLowerCase().includes(searchRoute.toLowerCase())
   );
 
   return (
@@ -88,26 +82,24 @@ export const BusTracker: React.FC = () => {
               className="pl-10"
             />
           </div>
+          
           <Button variant="outline" size="icon">
             <Filter className="w-4 h-4" />
           </Button>
+          
           <Button variant="outline" size="icon">
             <LocateFixed className="w-4 h-4" />
           </Button>
         </div>
       </Card>
 
-      {/* Real-time Bus Map */}
+      {/* Map Placeholder */}
       <Card className="metro-card">
-        <div className="mb-4">
-          <h2 className="metro-subheading">Live Bus Tracking</h2>
-          <p className="text-sm text-muted-foreground">Tap any bus to see its full route</p>
+        <div className="h-64 bg-muted/30 rounded-xl flex items-center justify-center relative overflow-hidden">
+          
+
+          <RouterTracker />
         </div>
-        <BusMap 
-          buses={filteredBuses}          // only show filtered buses
-          onBusSelect={setSelectedBus}
-          selectedBus={selectedBus}
-        />
       </Card>
 
       {/* Active Buses List */}
@@ -116,7 +108,7 @@ export const BusTracker: React.FC = () => {
           <h2 className="metro-subheading">Active Buses</h2>
           <span className="text-sm text-muted-foreground">{filteredBuses.length} buses</span>
         </div>
-
+        
         <div className="space-y-3">
           {filteredBuses.map((bus, index) => (
             <button
@@ -131,31 +123,25 @@ export const BusTracker: React.FC = () => {
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg" style={{
-                    backgroundColor: bus.status === 'online' ? 'rgba(34, 197, 94, 0.1)' : 
-                                     bus.status === 'warning' ? 'rgba(245, 158, 11, 0.1)' : 
-                                     'rgba(239, 68, 68, 0.1)'
-                  }}>
-                    <Bus className={`w-5 h-5`} style={{
-                      color: bus.status === 'online' ? '#22c55e' :
-                             bus.status === 'warning' ? '#f59e0b' :
-                             '#ef4444'
-                    }} />
+                  <div className="p-2 bg-primary/10 rounded-lg">
+                    <Bus className="w-5 h-5 text-primary" />
                   </div>
+                  
                   <div className="text-left">
                     <p className="font-semibold text-foreground">Bus {bus.number}</p>
-                    <p className="text-sm text-muted-foreground">{bus.route_name}</p>
+                    <p className="text-sm text-muted-foreground">{bus.route}</p>
                   </div>
                 </div>
-
+                
                 <div className="text-right">
                   <div className="flex items-center gap-2 mb-1">
                     <Clock className="w-4 h-4 text-muted-foreground" />
                     <span className="font-medium text-foreground">{bus.eta}</span>
                   </div>
+                  
                   <StatusIndicator 
                     status={bus.status} 
-                    // removed capacity to prevent % showing
+                 //   capacity={bus.capacity}
                   />
                 </div>
               </div>
@@ -171,20 +157,21 @@ export const BusTracker: React.FC = () => {
             <h3 className="metro-subheading">Bus {selectedBus.number} Details</h3>
             <StatusIndicator 
               status={selectedBus.status} 
-              // removed capacity to prevent % showing
+             // capacity={selectedBus.capacity}
             />
           </div>
+          
           <div className="space-y-3">
             <div className="flex items-center gap-2">
               <Navigation className="w-4 h-4 text-muted-foreground" />
-              <span className="metro-body">{selectedBus.route_name}</span>
+              <span className="metro-body">{selectedBus.route}</span>
             </div>
-
+            
             <div className="flex items-center gap-2">
               <Clock className="w-4 h-4 text-muted-foreground" />
               <span className="metro-body">Arriving in {selectedBus.eta}</span>
             </div>
-
+            
             <div className="flex items-center gap-2">
               <MapPin className="w-4 h-4 text-muted-foreground" />
               <span className="metro-body">
@@ -192,17 +179,10 @@ export const BusTracker: React.FC = () => {
               </span>
             </div>
           </div>
-
-          <div className="flex gap-2 mt-4">
-            <Button className="metro-button-primary flex-1">
-              <Route className="w-4 h-4 mr-2" />
-              View Full Route
-            </Button>
-            <Button variant="outline" className="flex-1">
-              <Navigation className="w-4 h-4 mr-2" />
-              Directions
-            </Button>
-          </div>
+          
+          <Button className="metro-button-primary w-full mt-4">
+            Get Directions
+          </Button>
         </Card>
       )}
     </div>
