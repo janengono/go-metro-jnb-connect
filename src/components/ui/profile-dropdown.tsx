@@ -33,7 +33,7 @@ export const ProfileDropdown = ({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        {trigger} {/* 👈 use whatever was passed */}
+        {trigger}
       </DropdownMenuTrigger>
 
       <DropdownMenuContent className="w-56" align="end" forceMount>
