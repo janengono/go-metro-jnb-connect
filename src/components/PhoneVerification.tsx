@@ -1,83 +1,150 @@
-import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
-import { Phone, Shield, CheckCircle } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import cityBackground from '@/assets/hero-bg.jpg';
+import React, { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+import { Phone, Shield, CheckCircle } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import cityBackground from "@/assets/hero-bg.jpg";
+
+import { auth } from "@/lib/firebase";
+import { signInWithPhoneNumber, RecaptchaVerifier } from "firebase/auth";
 
 interface PhoneVerificationProps {
   onVerificationComplete: (phoneNumber: string) => void;
 }
 
-export const PhoneVerification: React.FC<PhoneVerificationProps> = ({ onVerificationComplete }) => {
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [otp, setOtp] = useState('');
+export const PhoneVerification: React.FC<PhoneVerificationProps> = ({
+  onVerificationComplete,
+}) => {
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [otp, setOtp] = useState("");
   const [isOtpSent, setIsOtpSent] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
+  // ✅ SA number validation (+27XXXXXXXXX)
+  const validateSAPhoneNumber = (phone: string) => {
+    const cleaned = phone.replace(/\s/g, "");
+    const regex = /^\+27\d{9}$/;
+    return regex.test(cleaned);
+  };
+
+  // ✅ Setup reCAPTCHA safely
+  const setupRecaptcha = () => {
+    const container = document.getElementById("recaptcha-container");
+    if (!container) throw new Error("Recaptcha container not found");
+
+    // Clear old verifier if it exists
+    if ((window as any).recaptchaVerifier) {
+      (window as any).recaptchaVerifier.clear();
+    }
+
+    (window as any).recaptchaVerifier = new RecaptchaVerifier(
+      auth,
+      "recaptcha-container",
+      {
+        size: "invisible",
+        callback: () => console.log("reCAPTCHA solved ✅"),
+      }
+    );
+
+    return (window as any).recaptchaVerifier;
+  };
+
   const handleSendOtp = async () => {
-    if (!phoneNumber || phoneNumber.length < 10) {
+    if (!validateSAPhoneNumber(phoneNumber)) {
       toast({
         title: "Invalid Phone Number",
-        description: "Please enter a valid phone number",
-        variant: "destructive"
+        description: "Enter a valid SA number (+27...)",
+        variant: "destructive",
       });
       return;
     }
 
     setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      const appVerifier = setupRecaptcha();
+      const confirmation = await signInWithPhoneNumber(
+        auth,
+        phoneNumber,
+        appVerifier
+      );
+
+      (window as any).confirmationResult = confirmation;
       setIsOtpSent(true);
-      setIsLoading(false);
+
       toast({
         title: "OTP Sent",
         description: `Verification code sent to ${phoneNumber}`,
       });
-    }, 1500);
+    } catch (err: any) {
+      console.error(err);
+      toast({
+        title: "Error sending OTP",
+        description: err.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleVerifyOtp = async () => {
     if (otp.length !== 6) {
       toast({
         title: "Invalid OTP",
-        description: "Please enter the 6-digit verification code",
-        variant: "destructive"
+        description: "Please enter the 6-digit code",
+        variant: "destructive",
       });
       return;
     }
 
     setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      const confirmationResult = (window as any).confirmationResult;
+      const result = await confirmationResult.confirm(otp);
+
+      console.log("Verified user:", result.user);
       setIsVerified(true);
-      setIsLoading(false);
+
       toast({
         title: "Phone Verified!",
-        description: "Your phone number has been successfully verified",
+        description: "Your number has been verified successfully",
       });
-      // Wait a moment before calling the callback
+
       setTimeout(() => {
         onVerificationComplete(phoneNumber);
       }, 1000);
-    }, 1500);
+    } catch (err: any) {
+      console.error(err);
+      toast({
+        title: "Verification failed",
+        description: err.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
-    <div 
+    <div
       className="min-h-screen flex items-center justify-center p-4 relative"
       style={{
-        backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), url(${cityBackground})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat'
+        backgroundImage: `linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)), url(${cityBackground})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
       }}
-
     >
       <Card className="w-full max-w-md backdrop-blur-sm bg-card/95">
         <CardHeader className="text-center">
@@ -89,13 +156,12 @@ export const PhoneVerification: React.FC<PhoneVerificationProps> = ({ onVerifica
             )}
           </div>
           <CardTitle className="text-2xl">
-            {isVerified ? 'Phone number Verified!' : ''}
+            {isVerified ? "Phone Verified!" : ""}
           </CardTitle>
           <CardDescription>
-            {isVerified 
-              ? 'You can now proceed to select your role'
-              : 'Please enter your phone number to get started with GoMetro'
-            }
+            {isVerified
+              ? "You can now proceed to select your role"
+              : "Please enter your phone number to get started with GoMetro"}
           </CardDescription>
         </CardHeader>
 
@@ -116,31 +182,24 @@ export const PhoneVerification: React.FC<PhoneVerificationProps> = ({ onVerifica
               </div>
 
               {!isOtpSent ? (
-                <Button 
+                <Button
                   onClick={handleSendOtp}
                   disabled={isLoading || !phoneNumber}
                   className="w-full"
                   size="lg"
                 >
-                  {isLoading ? 'Sending...' : 'Send Verification Code'}
+                  {isLoading ? "Sending..." : "Send Verification Code"}
                 </Button>
               ) : (
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="otp">Enter Verification Code</Label>
                     <div className="flex justify-center">
-                      <InputOTP
-                        value={otp}
-                        onChange={setOtp}
-                        maxLength={6}
-                      >
+                      <InputOTP value={otp} onChange={setOtp} maxLength={6}>
                         <InputOTPGroup>
-                          <InputOTPSlot index={0} />
-                          <InputOTPSlot index={1} />
-                          <InputOTPSlot index={2} />
-                          <InputOTPSlot index={3} />
-                          <InputOTPSlot index={4} />
-                          <InputOTPSlot index={5} />
+                          {[0, 1, 2, 3, 4, 5].map((i) => (
+                            <InputOTPSlot key={i} index={i} />
+                          ))}
                         </InputOTPGroup>
                       </InputOTP>
                     </div>
@@ -150,20 +209,20 @@ export const PhoneVerification: React.FC<PhoneVerificationProps> = ({ onVerifica
                   </div>
 
                   <div className="space-y-2">
-                    <Button 
+                    <Button
                       onClick={handleVerifyOtp}
                       disabled={isLoading || otp.length !== 6}
                       className="w-full"
                       size="lg"
                     >
-                      {isLoading ? 'Verifying...' : 'Verify Code'}
+                      {isLoading ? "Verifying..." : "Verify Code"}
                     </Button>
-                    
-                    <Button 
-                      variant="ghost" 
+
+                    <Button
+                      variant="ghost"
                       onClick={() => {
                         setIsOtpSent(false);
-                        setOtp('');
+                        setOtp("");
                       }}
                       className="w-full"
                     >
@@ -188,6 +247,9 @@ export const PhoneVerification: React.FC<PhoneVerificationProps> = ({ onVerifica
           )}
         </CardContent>
       </Card>
+
+      {/* 🔑 Must always exist for Firebase reCAPTCHA */}
+      <div id="recaptcha-container"></div>
     </div>
   );
 };
