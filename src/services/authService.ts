@@ -25,26 +25,33 @@ class AuthService {
 
       const q = query(
         collection(db, "busCards"),
-        where("cardNumber", "==", cardNumber),
-        where("active", "==", true),
-        where("blocked", "==", false)
+        where("cardNumber", "==", cardNumber)
       );
 
       const querySnapshot = await getDocs(q);
 
-      if (!querySnapshot.empty) {
-        const cardData = querySnapshot.docs[0].data();
-        const expiryDate = new Date(cardData.expiryDate);
-        const today = new Date();
-
-        if (expiryDate < today) {
-          return { valid: false, error: "Card has expired" };
-        }
-
-        return { valid: true, cardData };
+      if (querySnapshot.empty) {
+        return { valid: false, error: "Invalid card number" };
       }
 
-      return { valid: false, error: "Invalid card number" };
+      const cardData = querySnapshot.docs[0].data();
+
+      if (cardData.blocked) {
+        return { valid: false, error: "Card is blocked" };
+      }
+
+      if (!cardData.active) {
+        return { valid: false, error: "Card is not active" };
+      }
+
+      if (cardData.expiryDate) {
+        const expiryDate = new Date(cardData.expiryDate);
+        if (expiryDate < new Date()) {
+          return { valid: false, error: "Card has expired" };
+        }
+      }
+
+      return { valid: true, cardData };
     } catch (error) {
       console.error("Error validating bus card:", error);
       return { valid: false, error: "Error validating card" };
@@ -93,7 +100,7 @@ class AuthService {
 
       const employeeData = querySnapshot.docs[0].data();
 
-      if (employeeData.position !== "Driver"  || employeeData.position !== "Driver") {
+      if (!employeeData.position || employeeData.position !== "Driver") {
         return { valid: false, error: "You are not registered as a Driver" };
       }
 
