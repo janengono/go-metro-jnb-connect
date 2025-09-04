@@ -290,19 +290,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode, userData }) => {
         </div>
       </Card>
 
-      {/* Balance Card */}
-      <Card className="metro-card metro-gradient-card">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <p className="metro-caption">Your Balance</p>
-            <p className="text-3xl font-bold text-foreground">R 87.50</p>
-          </div>
-          <div className="p-3 bg-primary/10 rounded-xl">
-            <CreditCard className="w-8 h-8 text-primary" />
-          </div>
-        </div>
-        <Button className="metro-button-primary w-full">Top Up Wallet</Button>
-      </Card>
+      
 
       {/* Top-Up Modal */}
       {showTopUp && (
