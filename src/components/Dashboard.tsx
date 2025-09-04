@@ -13,6 +13,7 @@ import {
   TrendingUp,
   Navigation
 } from 'lucide-react';
+import { VirtualCard } from '@/components/VirtualCard';
 
 type UserMode = 'commuter' | 'driver';
 
@@ -129,19 +130,18 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode }) => {
 
   return (
     <div className="p-4 space-y-6">
-      {/* Balance Card */}
-      <Card className="metro-card metro-gradient-card">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <p className="metro-caption">Your Balance</p>
-            <p className="text-3xl font-bold text-foreground">R 87.50</p>
-          </div>
-          
-          <div className="p-3 bg-primary/10 rounded-xl">
-            <CreditCard className="w-8 h-8 text-primary" />
-          </div>
-        </div>
-        
+      {/* Virtual Card */}
+      <div className="flex justify-center">
+        <VirtualCard
+          cardNumber="9027001100065679"
+          balance={87.50}
+          holderName="John Doe"
+          className="mb-2"
+        />
+      </div>
+      
+      {/* Balance Actions */}
+      <Card className="metro-card">
         <Button className="metro-button-primary w-full">
           Top Up Wallet
         </Button>

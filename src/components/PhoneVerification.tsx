@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { Phone, Shield, CheckCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import cityBackground from '@/assets/city-background.jpg';
 
 interface PhoneVerificationProps {
   onVerificationComplete: (phoneNumber: string) => void;
@@ -68,8 +69,16 @@ export const PhoneVerification: React.FC<PhoneVerificationProps> = ({ onVerifica
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
+    <div 
+      className="min-h-screen flex items-center justify-center p-4 relative"
+      style={{
+        backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), url(${cityBackground})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat'
+      }}
+    >
+      <Card className="w-full max-w-md backdrop-blur-sm bg-card/95">
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
             {isVerified ? (

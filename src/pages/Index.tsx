@@ -80,6 +80,11 @@ const Index = () => {
     setActiveTab('dashboard');
   };
 
+  const handleReportCard = () => {
+    // Show alert for demo purposes
+    alert('Report Lost/Stolen Card feature would be implemented here');
+  };
+
   // Phone verification screen
   if (currentFlow === 'phone-verification') {
     return <PhoneVerification onVerificationComplete={handlePhoneVerification} />;
@@ -134,14 +139,21 @@ const Index = () => {
             </div>
           </div>
           
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleLogout}
-            className="text-muted-foreground"
-          >
-            <Settings className="w-5 h-5" />
-          </Button>
+          <ProfileDropdown
+            onLogout={handleLogout}
+            onViewProfile={() => {/* Add view profile logic */}}
+            onEditProfile={() => {/* Add edit profile logic */}}
+            onReportCard={handleReportCard}
+            trigger={
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-muted-foreground"
+              >
+                <Settings className="w-5 h-5" />
+              </Button>
+            }
+          />
         </div>
       </header>
 
@@ -201,14 +213,21 @@ const Index = () => {
             </div>
           </div>
           
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleLogout}
-            className="text-muted-foreground"
-          >
-            <Settings className="w-5 h-5" />
-          </Button>
+          <ProfileDropdown
+            onLogout={handleLogout}
+            onViewProfile={() => {/* Add view profile logic */}}
+            onEditProfile={() => {/* Add edit profile logic */}}
+            onReportCard={undefined}
+            trigger={
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-muted-foreground"
+              >
+                <Settings className="w-5 h-5" />
+              </Button>
+            }
+          />
         </div>
       </header>
 
