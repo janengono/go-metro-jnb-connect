@@ -140,9 +140,9 @@ const Index = () => {
           </div>
           
           <ProfileDropdown
+          holderName= {userData.fullName}
+          cellNumber={ userData.phoneNumber}
             onLogout={handleLogout}
-            onViewProfile={() => {/* Add view profile logic */}}
-            onEditProfile={() => {/* Add edit profile logic */}}
             onReportCard={handleReportCard}
             trigger={
               <Button
@@ -214,9 +214,9 @@ const Index = () => {
           </div>
           
           <ProfileDropdown
+          holderName= {userData.fullName}
+          cellNumber={ userData.phoneNumber}
             onLogout={handleLogout}
-            onViewProfile={() => {/* Add view profile logic */}}
-            onEditProfile={() => {/* Add edit profile logic */}}
             onReportCard={undefined}
             trigger={
               <Button

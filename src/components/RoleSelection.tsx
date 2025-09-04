@@ -2,7 +2,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { User, Car, CheckCircle } from 'lucide-react';
-import cityBackground from '@/assets/city-background.jpg';
+import cityBackground from '@/assets/hero-bg.jpg';
 
 type UserRole = 'commuter' | 'driver';
 

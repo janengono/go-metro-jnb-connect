@@ -1,12 +1,15 @@
-import React from 'react';
+import React, {useState} from 'react';
 import { Card, CardContent, CardHeader, CardTitle  } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { StatusIndicator } from '@/components/StatusIndicator';
+import { Input } from '@/components/ui/input';
+import {TopUp} from '@/components/TopUp';
 import QuickReport from "@/components/QuickReport";
 import { 
   Bus, 
   Clock, 
-  MapPin, 
+  MapPin,
+  Plus, 
   Users, 
   AlertTriangle,
   CreditCard,
@@ -32,6 +35,15 @@ interface DashboardProps {
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({ userMode, userData }) => {
+  const [topUpAmount, setTopUpAmount] = useState<number>();
+  const quickAmounts = [ 50, 100, 200, 300];
+  const [showTopUp, setShowTopUp] = useState(false);
+  const handleTopUp = (amount: number) => {
+    // Handle top-up logic
+    console.log(`Topping up R${amount}`);
+    setShowTopUp(false);
+   // setTopUpAmount(0);
+  };
   const nearbyBuses = [
     { 
       number: '243', 
@@ -152,10 +164,76 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode, userData }) => {
       
       {/* Balance Actions */}
       <Card className="metro-card">
-        <Button className="metro-button-primary w-full">
-          Top Up Wallet
-        </Button>
+        <div className="flex justify-center">
+          <Button 
+            className="w-full max-w-sm"
+            onClick={() => setShowTopUp(true)}
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Top Up
+          </Button>
+        </div>
+
       </Card>
+
+                 {/* Top-Up Modal */}
+          {showTopUp && (
+            <Card className="metro-card border-primary/20">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="metro-subheading">Top Up Wallet</h3>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => setShowTopUp(false)}
+                >
+                  ✕
+                </Button>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">
+                    Please enter a minimum of R50
+                  </label>
+                  <Input
+                    type="number"
+                    placeholder="0.00"
+                    value={topUpAmount}
+                    onChange={(e) => setTopUpAmount(Number(e.target.value))}
+                    className="text-lg"
+                  />
+                </div>
+                
+                <div>
+                  <p className="text-sm font-medium text-foreground mb-2">Quick Amounts</p>
+                  <div className="grid grid-cols-4 gap-2">
+                    {quickAmounts.map((amount) => (
+                      <Button
+                        key={amount}
+                        variant="outline"
+                        onClick={() => setTopUpAmount(amount)}
+                        className="text-sm"
+                      >
+                        R{amount}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Google Pay button container */}
+                <div className="flex justify-center mt-4">
+                  {topUpAmount >= 50 ? (
+                    <TopUp topUpAmount={topUpAmount} 
+                     onClose={() => setShowTopUp(false)} />
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      Enter R50 or more to enable Google Pay
+                    </p>
+                  )}
+                </div>
+              </div>
+            </Card>
+              )}
 
       {/* Nearby Buses */}
       <Card className="metro-card">
