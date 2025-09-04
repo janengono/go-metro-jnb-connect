@@ -8,6 +8,7 @@ import { WalletCard } from '@/components/WalletCard';
 import { NewsCard } from '@/components/NewsCard';
 import { Button } from '@/components/ui/button';
 import {ProfileDropdown}   from '@/components/ui/profile-dropdown';
+import { auth, db } from "../lib/firebase";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -213,7 +214,7 @@ const Index = () => {
             </div>
           </div>
           
-          <ProfileDropdown
+           <ProfileDropdown
           holderName= {userData.fullName}
           cellNumber={ userData.phoneNumber}
             onLogout={handleLogout}
