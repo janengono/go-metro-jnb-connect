@@ -30,40 +30,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    /*const unsub = onAuthStateChanged(auth, async (fbUser: User | null) => {
-      if (!fbUser) {
-        setUser(null);
-        setLoading(false);
-        return;
-      }
+  const unsubscribe = onAuthStateChanged(auth, async (fbUser: User | null) => {
+    if (!fbUser) {
+      setUser(null);
+      setLoading(false);
+      return;
+    }
 
-      const snap = await getDoc(doc(db, "users", fbUser.uid));
-      if (!snap.exists()) {
-        setUser(null);
-        setLoading(false);
-        return;
-      }
+    const snap = await getDoc(doc(db, "users", fbUser.uid));
+    if (!snap.exists()) {
+      setUser(null);
+      setLoading(false);
+      return;
+    }
 
-      const data = snap.data() as FirestoreUser;
+    const data = snap.data() as FirestoreUser;
 
       setUser({
         uid: fbUser.uid,
         role: data.role,
         full_name: data.full_name,
-        employee_number:data.employee_number,
+        employee_number: data.employee_number || "",
       });
 
       setLoading(false);
-    });*/
-    setUser({
+    });
+    /*setUser({
         uid:"001",
         full_name: "Annah Mlimi",
         role:"driver",
         employee_number:"EMP-001",
         
     });
-    setLoading(false);
-    //return () => unsub();
+    setLoading(false);*/
+    return () => unsubscribe();
   }, []);
 
 
