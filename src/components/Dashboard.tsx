@@ -39,7 +39,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode }) => {
   const [route, setRoute] = useState<RouteType | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const driverId = user?.uid ?? "";
+  const driverId = user?.uid;
 
 
   console.log("Auth user:", user);

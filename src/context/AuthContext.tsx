@@ -17,6 +17,7 @@ type AppUser = {
   uid: string;
   role: "driver" | "commuter" | "admin";
   full_name: string;
+  employee_number:string;
 };
 
 const AuthCtx = createContext<{ user: AppUser | null; loading: boolean }>({
@@ -29,7 +30,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (fbUser: User | null) => {
+    /*const unsub = onAuthStateChanged(auth, async (fbUser: User | null) => {
       if (!fbUser) {
         setUser(null);
         setLoading(false);
@@ -43,19 +44,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      const data = snap.data() as FirestoreUser;
+      const data = snap.data() as FirestoreUser;*/
 
-      setUser({
+      /*setUser({
         uid: fbUser.uid,
         role: data.role,
         full_name: data.full_name ?? "",
       });
 
       setLoading(false);
+    });*/
+    setUser({
+        uid:"001",
+        full_name: "Annah Mlimi",
+        role:"driver",
+        employee_number:"EMP-001",
+        
     });
-
-    return () => unsub();
+    setLoading(false);
+    //});
+    //return () => unsub();
   }, []);
+
 
   return (
     <AuthCtx.Provider value={{ user, loading }}>

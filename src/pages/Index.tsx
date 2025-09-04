@@ -40,6 +40,22 @@ const Index = () => {
   // Handlers stay the same...
   const handlePhoneVerification = (phoneNumber: string) => {
     setVerifiedPhone(phoneNumber);
+    // Simulate checking if user already exists
+    const isReturningUser = Math.random() > 0.7; // 30% chance of being returning user for demo
+    
+  /*  if (isReturningUser) {
+      // Simulate existing user data
+      const existingUserData: UserData = {
+        fullName: "John Doe",
+        phoneNumber,
+        role: Math.random() > 0.5 ? 'commuter' : 'driver',
+        cardNumber: "BC123456789",
+        isNewUser: false
+      };
+      setUserData(existingUserData);
+      setCurrentFlow('dashboard');
+    } */
+
     setCurrentFlow('role-selection');
   };
 
@@ -64,7 +80,7 @@ const Index = () => {
   };
 
   // --- FLOW HANDLING ---
-  if (currentFlow === 'phone-verification') {
+   if (currentFlow === 'phone-verification') {
     return <PhoneVerification onVerificationComplete={handlePhoneVerification} />;
   }
 
