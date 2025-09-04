@@ -1,15 +1,31 @@
-import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { User, CreditCard, IdCard, Phone, AlertCircle, CheckCircle, QrCode } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { QRScanner } from '@/components/QRScanner';
-import cityBackground from '@/assets/hero-bg.jpg';
+import React, { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  User,
+  CreditCard,
+  IdCard,
+  Phone,
+  AlertCircle,
+  CheckCircle,
+  QrCode,
+} from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { QRScanner } from "@/components/QRScanner";
+import AuthService from "@/services/authService";
+import { auth } from "@/lib/firebase.ts";
+import cityBackground from "@/assets/hero-bg.jpg";
 
-type UserRole = 'commuter' | 'driver';
+type UserRole = "commuter" | "driver";
 
 interface SignupFormProps {
   role: UserRole;
@@ -18,92 +34,132 @@ interface SignupFormProps {
   onBackToRoleSelection: () => void;
 }
 
-export const SignupForm: React.FC<SignupFormProps> = ({ 
-  role, 
-  phoneNumber, 
+export const SignupForm: React.FC<SignupFormProps> = ({
+  role,
+  phoneNumber,
   onSignupComplete,
-  onBackToRoleSelection 
+  onBackToRoleSelection,
 }) => {
-  const [fullName, setFullName] = useState('');
-  const [cardNumber, setCardNumber] = useState('');
-  const [employeeNumber, setEmployeeNumber] = useState('');
+  const [fullName, setFullName] = useState("");
+  const [cardNumber, setCardNumber] = useState("");
+  const [employeeNumber, setEmployeeNumber] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const { toast } = useToast();
 
+  // ✅ Validate form
+  const validateForm = async () => {
+    if (!fullName.trim()) {
+      setError("Full name is required");
+      return false;
+    }
+
+    if (role === "commuter") {
+      if (!cardNumber.trim() || cardNumber.length !== 16) {
+        setError("Bus card number must be exactly 16 digits");
+        return false;
+      }
+      const cardCheck = await AuthService.validateBusCard(cardNumber);
+      if (!cardCheck.valid) {
+        setError(cardCheck.error || "Invalid bus card");
+        return false;
+      }
+    }
+
+    if (role === "driver") {
+      if (!employeeNumber.trim()) {
+        setError("Employee number is required");
+        return false;
+      }
+
+      const check = await AuthService.verifyEmployee(employeeNumber, phoneNumber);
+      if (!check.valid) {
+        setError(check.error || "Employee verification failed");
+        return false;
+      }
+    }
+
+    return true;
+  };
+
+  // ✅ Submit handler
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-
-    if (!fullName.trim()) {
-      setError('Full name is required');
-      return;
-    }
-
-    if (role === 'commuter' && !cardNumber.trim()) {
-      setError('Card number is required for commuters');
-      return;
-    }
-
-    if (role === 'driver' && !employeeNumber.trim()) {
-      setError('Employee number is required for drivers');
-      return;
-    }
+    setError("");
+    const isValid = await validateForm();
+    if (!isValid) return;
 
     setIsLoading(true);
 
-    // Simulate backend verification
-    setTimeout(() => {
-      // Simulate random success/failure for demo
-      const isValid = Math.random() > 0.3; // 70% success rate for demo
+    try {
+      const user = auth.currentUser;
+      if (!user) throw new Error("No authenticated user");
 
-      if (isValid) {
-        const userData = {
+      let result;
+
+      if (role === "commuter") {
+        result = await AuthService.saveUserProfile(user.uid, "commuter", {
           fullName,
           phoneNumber,
           role,
-          ...(role === 'commuter' ? { cardNumber } : { employeeNumber }),
-          isNewUser: true
-        };
+          cardNumber,
+        });
+      } else if (role === "driver") {
+        result = await AuthService.saveUserProfile(user.uid, "driver", {
+          fullName,
+          phoneNumber,
+          role,
+          employeeNumber,
+        });
+      }
 
+      if (result.success) {
         toast({
-          title: "Registration Successful!",
-          description: `Welcome to GoMetro, ${fullName}!`,
+          title: "Success!",
+          description: `${
+            role === "commuter" ? "Commuter" : "Driver"
+          } account created successfully`,
         });
 
-        onSignupComplete(userData);
+        onSignupComplete({
+          fullName,
+          phoneNumber,
+          role,
+          ...(role === "commuter" ? { cardNumber } : { employeeNumber }),
+        });
       } else {
-        setError(
-          role === 'commuter' 
-            ? 'Card number not found in our system. Please check your card number.'
-            : 'Employee number not found in our system. Please check your employee number.'
-        );
+        setError(result.error || "Signup failed");
       }
+    } catch (err: any) {
+      setError(err.message || "Something went wrong");
+    } finally {
       setIsLoading(false);
-    }, 2000);
+    }
   };
 
   return (
-    <div 
+    <div
       className="min-h-screen flex items-center justify-center p-4 relative"
       style={{
         backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), url(${cityBackground})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat'
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
       }}
     >
       <Card className="w-full max-w-md backdrop-blur-sm bg-card/95">
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
-            {role === 'commuter' ? (
+            {role === "commuter" ? (
               <User className="w-8 h-8 text-primary" />
             ) : (
               <IdCard className="w-8 h-8 text-primary" />
             )}
           </div>
           <CardTitle className="text-2xl">
-            {role === 'commuter' ? 'Commuter Registration' : 'Driver Registration'}
+            {role === "commuter"
+              ? "Commuter Registration"
+              : "Driver Registration"}
           </CardTitle>
           <CardDescription>
             Complete your profile to start using GoMetro
@@ -128,11 +184,10 @@ export const SignupForm: React.FC<SignupFormProps> = ({
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 disabled={isLoading}
-                required
               />
             </div>
 
-            {role === 'commuter' ? (
+            {role === "commuter" && (
               <div className="space-y-2">
                 <Label htmlFor="cardNumber">Card Number</Label>
                 <div className="flex gap-2">
@@ -143,16 +198,18 @@ export const SignupForm: React.FC<SignupFormProps> = ({
                       type="text"
                       placeholder="Enter your bus card number"
                       value={cardNumber}
-                      onChange={(e) => setCardNumber(e.target.value)}
+                      onChange={(e) =>
+                        setCardNumber(e.target.value.replace(/\D/g, ""))
+                      }
                       disabled={isLoading}
                       className="pl-10"
-                      required
+                      maxLength={16}
                     />
                   </div>
                   <QRScanner onScanResult={setCardNumber}>
-                    <Button 
-                      type="button" 
-                      variant="outline" 
+                    <Button
+                      type="button"
+                      variant="outline"
                       size="icon"
                       className="shrink-0"
                       disabled={isLoading}
@@ -160,13 +217,14 @@ export const SignupForm: React.FC<SignupFormProps> = ({
                       <QrCode className="w-4 h-4" />
                     </Button>
                   </QRScanner>
-
                 </div>
                 <p className="text-xs text-muted-foreground">
                   Scan the QR code on your physical bus card or enter manually
                 </p>
               </div>
-            ) : (
+            )}
+
+            {role === "driver" && (
               <div className="space-y-2">
                 <Label htmlFor="employeeNumber">Employee Number</Label>
                 <div className="relative">
@@ -179,7 +237,6 @@ export const SignupForm: React.FC<SignupFormProps> = ({
                     onChange={(e) => setEmployeeNumber(e.target.value)}
                     disabled={isLoading}
                     className="pl-10"
-                    required
                   />
                 </div>
               </div>
@@ -204,18 +261,18 @@ export const SignupForm: React.FC<SignupFormProps> = ({
             </div>
 
             <div className="space-y-2 pt-4">
-              <Button 
+              <Button
                 type="submit"
                 disabled={isLoading}
                 className="w-full"
                 size="lg"
               >
-                {isLoading ? 'Registering...' : 'Complete Registration'}
+                {isLoading ? "Registering..." : "Complete Registration"}
               </Button>
-              
-              <Button 
+
+              <Button
                 type="button"
-                variant="ghost" 
+                variant="ghost"
                 onClick={onBackToRoleSelection}
                 disabled={isLoading}
                 className="w-full"

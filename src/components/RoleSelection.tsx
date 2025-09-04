@@ -8,7 +8,7 @@ type UserRole = 'commuter' | 'driver';
 
 interface RoleSelectionProps {
   phoneNumber: string;
-  onRoleSelect: (role: UserRole) => void;
+  onRoleSelect: (role: UserRole) => void; // ✅ real callback, controlled by parent
 }
 
 export const RoleSelection: React.FC<RoleSelectionProps> = ({ phoneNumber, onRoleSelect }) => {
@@ -24,7 +24,7 @@ export const RoleSelection: React.FC<RoleSelectionProps> = ({ phoneNumber, onRol
       id: 'driver' as UserRole,
       title: 'I\'m a Driver',
       description: 'I drive Metro Bus vehicles and serve commuters',
-      icon: Car,
+      icon: Car, // ✅ leaving as Car per Lovable UI
       features: ['Update bus capacity', 'Report route status', 'Communicate with control', 'Share live location']
     }
   ];
@@ -59,7 +59,11 @@ export const RoleSelection: React.FC<RoleSelectionProps> = ({ phoneNumber, onRol
             const Icon = role.icon;
             
             return (
-              <Card key={role.id} className="cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-[1.02] backdrop-blur-sm bg-card/95">
+              <Card 
+                key={role.id} 
+                onClick={() => onRoleSelect(role.id)} // ✅ fires callback when card is clicked
+                className="cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-[1.02] backdrop-blur-sm bg-card/95"
+              >
                 <CardHeader className="text-center pb-4">
                   <div className="mx-auto mb-4 w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
                     <Icon className="w-8 h-8 text-primary" />
@@ -84,7 +88,7 @@ export const RoleSelection: React.FC<RoleSelectionProps> = ({ phoneNumber, onRol
                   </div>
 
                   <Button 
-                    onClick={() => onRoleSelect(role.id)}
+                    onClick={() => onRoleSelect(role.id)} // ✅ fires callback again
                     className="w-full mt-6"
                     size="lg"
                   >
