@@ -1,31 +1,74 @@
 import { useState } from "react";
 import { AlertTriangle, Clock, Users, Wrench, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input"; // Or use <textarea> styled
 import { toast } from "@/hooks/use-toast";
+import { db } from "../lib/firebase";
+import { collection, addDoc, doc, updateDoc } from "firebase/firestore";
+import { BusType } from "@/components/types";
 
+// Define the props for this component
 interface QuickReportProps {
   userMode: "commuter" | "driver";
+  bus: BusType | null;
 }
 
-const QuickReport = ({ userMode }: QuickReportProps) => {
+const QuickReport = ({ userMode, bus }: QuickReportProps) => {
   const [showOtherInput, setShowOtherInput] = useState(false);
   const [otherText, setOtherText] = useState("");
 
-  const handleReport = (type: string, customText?: string) => {
-    toast({
-      title: "Report Submitted",
-      description:
-        customText && customText.trim().length > 0
-          ? customText
-          : `Your ${type.toLowerCase()} report has been sent to the control center.`,
-    });
+  const handleReport = async (type: string, customText?: string) => {
+    if (!bus?.id) return; // make sure bus is provided
 
-    // reset state after submission
-    setShowOtherInput(false);
-    setOtherText("");
+    const reportData = {
+      busId: bus.id,
+      type,
+      details: customText || type,
+      timestamp: new Date().toISOString(),
+      // reporterId: user?.uid // TODO: wire this up with auth context
+    };
+
+    try {
+      // 1. Save report in Firestore
+      await addDoc(collection(db, "reports"), reportData);
+
+      // 2. Update bus status
+      const statusMap: Record<string, string> = {
+        "Bus Delay": "Delayed",
+        "Breakdown": "Broken",
+        "Emergency": "Emergency",
+        "Other Issue": "Other",
+        "Overcrowding": "Overcrowded",
+        "Vehicle Issue": "Vehicle Issue",
+        "Route Problem": "Route Problem",
+        "Passenger Issue": "Passenger Issue",
+        "Schedule Update": "Schedule Update",
+      };
+
+      const status = statusMap[type] || "Other";
+
+      await updateDoc(doc(db, "buses", bus.id), { status });
+
+      // 3. UI feedback
+      toast({
+        title: "Report Submitted",
+        description:
+          customText && customText.trim().length > 0
+            ? customText
+            : `Your ${type.toLowerCase()} report has been sent.`,
+      });
+
+      setShowOtherInput(false);
+      setOtherText("");
+    } catch (err) {
+      console.error("Error submitting report:", err);
+      toast({
+        title: "Error",
+        description: "Could not send the report. Please try again.",
+      });
+    }
   };
 
+  // Define the button options
   const commuterReports = [
     { icon: Clock, label: "Bus Delay", color: "btn-warning", description: "Report late or missing bus" },
     { icon: Users, label: "Overcrowding", color: "btn-warning", description: "Bus is too full" },
@@ -82,13 +125,13 @@ const QuickReport = ({ userMode }: QuickReportProps) => {
             rows={4}
           />
           <div className="flex justify-center">
-          <Button 
-            className="w-full max-w-sm"
-            disabled={otherText.trim().length === 0}
-            onClick={() => handleReport("Other Issue", otherText)}
-          >
-            Submit
-          </Button>
+            <Button 
+              className="w-full max-w-sm"
+              disabled={otherText.trim().length === 0}
+              onClick={() => handleReport("Other Issue", otherText)}
+            >
+              Submit
+            </Button>
           </div>
         </div>
       )}

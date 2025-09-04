@@ -26,6 +26,7 @@ import {
   updateDoc,
   onSnapshot as onDocSnapshot,
   DocumentData,
+  getDocs,
 } from "firebase/firestore";
 import { useAuth } from "../context/AuthContext";
 import { VirtualCard } from "@/components/VirtualCard";
@@ -71,11 +72,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode, userData }) => {
   const [newCapacity, setNewCapacity] = useState<number | "">("");
   const [topUpAmount, setTopUpAmount] = useState<number>();
   const [showTopUp, setShowTopUp] = useState(false);
+  const [nearbyBuses, setNearbyBuses] = useState<BusType[]>([]);
+  const [selectedBus, setSelectedBus] = useState<BusType | null>(null);
 
   const quickAmounts = [50, 100, 200, 300];
   const driverId = user?.uid;
 
-  // Capacity update
+  // Capacity update for driver bus
   const handleCapacityUpdate = async () => {
     if (!bus || newCapacity === "") return;
     try {
@@ -116,7 +119,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode, userData }) => {
     return () => unsub();
   }, [driverId]);
 
-  // Subscribe to route doc
+  // Subscribe to route doc for driver bus
   useEffect(() => {
     if (!bus?.route_id) return;
     const unsub = onDocSnapshot(doc(db, "routes", bus.route_id), (snap) => {
@@ -135,6 +138,32 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode, userData }) => {
     });
     return () => unsub();
   }, [bus?.route_id]);
+
+  // -------------------- COMMUTER: Subscribe to nearby buses real-time -------------------
+  useEffect(() => {
+    if (userMode !== "commuter") return;
+
+    // Example approach: Query buses that are "active" or in certain proximity (customize as needed)
+    // For demo, subscribe to all buses; filter by proximity could be added here.
+    const q = query(collection(db, "buses"));
+    const unsub = onSnapshot(q, (snapshot) => {
+      const buses: BusType[] = snapshot.docs.map((doc) => {
+        const data = doc.data() as DocumentData;
+        return {
+          id: doc.id,
+          bus_number: data.bus_number,
+          route_id: data.route_id,
+          capacity: data.capacity,
+          current_capacity: data.current_capacity,
+          status: data.status,
+        };
+      });
+      setNearbyBuses(buses);
+      // Optionally auto-select the first bus on list
+      if (buses.length > 0 && !selectedBus) setSelectedBus(buses[0]);
+    });
+    return () => unsub();
+  }, [userMode, selectedBus]);
 
   if (loading) return <div className="p-6">Loading dashboard…</div>;
 
@@ -231,7 +260,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode, userData }) => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <QuickReport userMode={userMode} />
+            <QuickReport userMode={userMode} bus={bus} />
           </CardContent>
         </Card>
       </div>
@@ -239,30 +268,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode, userData }) => {
   }
 
   // ---------------- COMMUTER VIEW ----------------
-  const nearbyBuses = [
-    {
-      number: "243",
-      route: "Sandton → Soweto",
-      eta: "3 min",
-      capacity: 85,
-      status: "online" as const,
-    },
-    {
-      number: "156",
-      route: "Rosebank → Alexandra",
-      eta: "7 min",
-      capacity: 45,
-      status: "online" as const,
-    },
-    {
-      number: "089",
-      route: "CBD → Midrand",
-      eta: "12 min",
-      capacity: 95,
-      status: "warning" as const,
-    },
-  ];
-
   return (
     <div className="p-4 space-y-6">
       {/* Virtual Card */}
@@ -278,10 +283,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode, userData }) => {
       {/* Balance Actions */}
       <Card className="metro-card">
         <div className="flex justify-center">
-          <Button
-            className="w-full max-w-sm"
-            onClick={() => setShowTopUp(true)}
-          >
+          <Button className="w-full max-w-sm" onClick={() => setShowTopUp(true)}>
             <Plus className="w-4 h-4 mr-2" />
             Top Up
           </Button>
@@ -307,11 +309,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode, userData }) => {
         <Card className="metro-card border-primary/20">
           <div className="flex items-center justify-between mb-4">
             <h3 className="metro-subheading">Top Up Wallet</h3>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowTopUp(false)}
-            >
+            <Button variant="ghost" size="sm" onClick={() => setShowTopUp(false)}>
               ✕
             </Button>
           </div>
@@ -331,9 +329,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode, userData }) => {
             </div>
 
             <div>
-              <p className="text-sm font-medium text-foreground mb-2">
-                Quick Amounts
-              </p>
+              <p className="text-sm font-medium text-foreground mb-2">Quick Amounts</p>
               <div className="grid grid-cols-4 gap-2">
                 {quickAmounts.map((amount) => (
                   <Button
@@ -351,10 +347,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode, userData }) => {
             {/* Google Pay button container */}
             <div className="flex justify-center mt-4">
               {topUpAmount && topUpAmount >= 50 ? (
-                <TopUp
-                  topUpAmount={topUpAmount}
-                  onClose={() => setShowTopUp(false)}
-                />
+                <TopUp topUpAmount={topUpAmount} onClose={() => setShowTopUp(false)} />
               ) : (
                 <p className="text-sm text-muted-foreground">
                   Enter R50 or more to enable Google Pay
@@ -369,39 +362,57 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode, userData }) => {
       <Card className="metro-card">
         <div className="flex items-center justify-between mb-4">
           <h2 className="metro-subheading">Nearby Buses</h2>
-          <Button variant="ghost" size="sm" className="text-primary">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-primary"
+            onClick={() => {
+              // Manual refresh - Could refetch realtime or force update by resetting nearbyBuses
+              // For now, no-op as onSnapshot is live
+            }}
+          >
             Refresh
           </Button>
         </div>
         <div className="space-y-3">
           {nearbyBuses.map((bus, index) => (
             <div
-              key={bus.number}
-              className="flex items-center justify-between p-4 bg-muted/30 rounded-xl metro-fade-in"
+              key={bus.id}
+              className={`flex items-center justify-between p-4 rounded-xl metro-fade-in cursor-pointer ${
+                selectedBus?.id === bus.id ? "bg-primary/20" : "bg-muted/30"
+              }`}
               style={{ animationDelay: `${index * 0.1}s` }}
+              onClick={() => setSelectedBus(bus)}
             >
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-primary/10 rounded-lg">
                   <Bus className="w-5 h-5 text-primary" />
                 </div>
                 <div>
-                  <p className="font-semibold text-foreground">Bus {bus.number}</p>
-                  <p className="text-sm text-muted-foreground">{bus.route}</p>
+                  <p className="font-semibold text-foreground">Bus {bus.bus_number}</p>
+                  {/* Optionally fetch route name */}
+                  <p className="text-sm text-muted-foreground">
+                    Route: {/* could fetch & show route_name here */}
+                    {bus.route_id}
+                  </p>
                 </div>
               </div>
               <div className="text-right">
                 <div className="flex items-center gap-2 mb-1">
                   <Clock className="w-4 h-4 text-muted-foreground" />
-                  <span className="font-medium text-foreground">{bus.eta}</span>
+                  <span className="font-medium text-foreground">
+                    {/* For simplicity, static ETA shown or can be extended */}
+                    ETA unknown
+                  </span>
                 </div>
-                <StatusIndicator status={bus.status} />
+                <StatusIndicator status={bus.status as "online" | "warning" | "offline"} />
               </div>
             </div>
           ))}
         </div>
       </Card>
 
-      {/* Quick Actions */}
+      {/* Quick Actions with selected bus */}
       <Card className="card-elevated animate-slide-up">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -410,7 +421,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode, userData }) => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <QuickReport userMode={userMode} />
+          {/* Pass selectedBus so commuter can report on specific bus */}
+          <QuickReport userMode={userMode} bus={selectedBus} />
         </CardContent>
       </Card>
     </div>
