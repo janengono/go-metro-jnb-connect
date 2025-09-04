@@ -1,31 +1,41 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { User, Car, CheckCircle } from 'lucide-react';
+import { User, Bus, CheckCircle } from 'lucide-react';
 
 type UserRole = 'commuter' | 'driver';
 
 interface RoleSelectionProps {
   phoneNumber: string;
-  onRoleSelect: (role: UserRole) => void;
+  onRoleSelect: (role: UserRole) => void; // ✅ added callback
 }
 
 export const RoleSelection: React.FC<RoleSelectionProps> = ({ phoneNumber, onRoleSelect }) => {
   const roles = [
     {
       id: 'commuter' as UserRole,
-      title: 'I\'m a Commuter',
+      title: "I'm a Commuter",
       description: 'I use Metro Bus services to travel around Johannesburg',
       icon: User,
-      features: ['Track buses in real-time', 'Digital wallet for payments', 'Report issues', 'Get service updates']
+      features: [
+        'Track buses in real-time',
+        'Digital wallet for payments',
+        'Report issues',
+        'Get service updates',
+      ],
     },
     {
       id: 'driver' as UserRole,
-      title: 'I\'m a Driver',
+      title: "I'm a Driver",
       description: 'I drive Metro Bus vehicles and serve commuters',
-      icon: Car,
-      features: ['Update bus capacity', 'Report route status', 'Communicate with control', 'Share live location']
-    }
+      icon: Bus,
+      features: [
+        'Update bus capacity',
+        'Report route status',
+        'Communicate with control',
+        'Share live location',
+      ],
+    },
   ];
 
   return (
@@ -37,20 +47,20 @@ export const RoleSelection: React.FC<RoleSelectionProps> = ({ phoneNumber, onRol
             <span className="text-lg font-medium text-green-600">Phone Verified</span>
           </div>
           <h1 className="text-3xl font-bold mb-2">Choose Your Role</h1>
-          <p className="text-muted-foreground">
-            How will you be using GoMetro?
-          </p>
-          <p className="text-sm text-muted-foreground mt-1">
-            Verified: {phoneNumber}
-          </p>
+          <p className="text-muted-foreground">How will you be using GoMetro?</p>
+          <p className="text-sm text-muted-foreground mt-1">Verified: {phoneNumber}</p>
         </div>
 
         <div className="grid md:grid-cols-2 gap-6">
           {roles.map((role) => {
             const Icon = role.icon;
-            
+
             return (
-              <Card key={role.id} className="cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-[1.02]">
+              <Card
+                key={role.id}
+                onClick={() => onRoleSelect(role.id)} // ✅ use callback
+                className="cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-[1.02]"
+              >
                 <CardHeader className="text-center pb-4">
                   <div className="mx-auto mb-4 w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
                     <Icon className="w-8 h-8 text-primary" />
@@ -74,8 +84,8 @@ export const RoleSelection: React.FC<RoleSelectionProps> = ({ phoneNumber, onRol
                     </ul>
                   </div>
 
-                  <Button 
-                    onClick={() => onRoleSelect(role.id)}
+                  <Button
+                    onClick={() => onRoleSelect(role.id)} // ✅ callback again
                     className="w-full mt-6"
                     size="lg"
                   >

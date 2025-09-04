@@ -1,70 +1,143 @@
-import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
-import { Phone, Shield, CheckCircle } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import React, { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+} from "@/components/ui/input-otp";
+import { Phone, Shield, CheckCircle } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { auth } from "@/firebase/config";
+import { signInWithPhoneNumber, RecaptchaVerifier } from "firebase/auth";
 
 interface PhoneVerificationProps {
   onVerificationComplete: (phoneNumber: string) => void;
 }
 
-export const PhoneVerification: React.FC<PhoneVerificationProps> = ({ onVerificationComplete }) => {
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [otp, setOtp] = useState('');
+export const PhoneVerification: React.FC<PhoneVerificationProps> = ({
+  onVerificationComplete,
+}) => {
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [otp, setOtp] = useState("");
   const [isOtpSent, setIsOtpSent] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
+  // ✅ SA number validation (+27XXXXXXXXX)
+  const validateSAPhoneNumber = (phone: string) => {
+    const cleaned = phone.replace(/\s/g, "");
+    const regex = /^\+27\d{9}$/;
+    return regex.test(cleaned);
+  };
+
+  // ✅ Send OTP using Firebase
   const handleSendOtp = async () => {
-    if (!phoneNumber || phoneNumber.length < 10) {
+    if (!validateSAPhoneNumber(phoneNumber)) {
       toast({
         title: "Invalid Phone Number",
-        description: "Please enter a valid phone number",
-        variant: "destructive"
+        description: "Enter valid SA number (+27...)",
+        variant: "destructive",
       });
       return;
     }
 
     setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => {
+
+    try {
+      // Setup reCAPTCHA (only once)
+      if (!(window as any).recaptchaVerifier) {
+        const recaptchaContainer = document.getElementById("recaptcha-container");
+        if (!recaptchaContainer) {
+          throw new Error("Recaptcha container not found in DOM");
+        }
+
+        (window as any).recaptchaVerifier = new RecaptchaVerifier(
+          auth,
+          recaptchaContainer, // ✅ now passing element instead of string
+          {
+            size: "invisible",
+            callback: () => {
+              console.log("reCAPTCHA solved");
+            },
+          },
+        );
+      }
+
+      const confirmation = await signInWithPhoneNumber(
+        auth,
+        phoneNumber,
+        (window as any).recaptchaVerifier
+      );
+
+      (window as any).confirmationResult = confirmation; // save globally
       setIsOtpSent(true);
-      setIsLoading(false);
+
       toast({
         title: "OTP Sent",
         description: `Verification code sent to ${phoneNumber}`,
       });
-    }, 1500);
+    } catch (err: any) {
+      console.error(err);
+      toast({
+        title: "Error sending OTP",
+        description: err.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
+  // ✅ Verify OTP
   const handleVerifyOtp = async () => {
     if (otp.length !== 6) {
       toast({
         title: "Invalid OTP",
         description: "Please enter the 6-digit verification code",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
 
     setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => {
+
+    try {
+      const confirmationResult = (window as any).confirmationResult;
+      const result = await confirmationResult.confirm(otp);
+
+      console.log("Verified user:", result.user);
+
       setIsVerified(true);
-      setIsLoading(false);
+
       toast({
         title: "Phone Verified!",
         description: "Your phone number has been successfully verified",
       });
-      // Wait a moment before calling the callback
+
+      // move on to role selection after short delay
       setTimeout(() => {
         onVerificationComplete(phoneNumber);
       }, 1000);
-    }, 1500);
+    } catch (err: any) {
+      console.error(err);
+      toast({
+        title: "Verification failed",
+        description: err.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -79,13 +152,12 @@ export const PhoneVerification: React.FC<PhoneVerificationProps> = ({ onVerifica
             )}
           </div>
           <CardTitle className="text-2xl">
-            {isVerified ? 'Phone Verified!' : 'Verify Your Phone'}
+            {isVerified ? "Phone Verified!" : "Verify Your Phone"}
           </CardTitle>
           <CardDescription>
-            {isVerified 
-              ? 'You can now proceed to select your role'
-              : 'Enter your phone number to get started with GoMetro'
-            }
+            {isVerified
+              ? "You can now proceed to select your role"
+              : "Enter your phone number to get started with GoMetro"}
           </CardDescription>
         </CardHeader>
 
@@ -106,13 +178,13 @@ export const PhoneVerification: React.FC<PhoneVerificationProps> = ({ onVerifica
               </div>
 
               {!isOtpSent ? (
-                <Button 
+                <Button
                   onClick={handleSendOtp}
                   disabled={isLoading || !phoneNumber}
                   className="w-full"
                   size="lg"
                 >
-                  {isLoading ? 'Sending...' : 'Send Verification Code'}
+                  {isLoading ? "Sending..." : "Send Verification Code"}
                 </Button>
               ) : (
                 <div className="space-y-4">
@@ -121,7 +193,7 @@ export const PhoneVerification: React.FC<PhoneVerificationProps> = ({ onVerifica
                     <div className="flex justify-center">
                       <InputOTP
                         value={otp}
-                        onChange={setOtp}
+                        onChange={(val: string) => setOtp(val)} // ✅ TS safe
                         maxLength={6}
                       >
                         <InputOTPGroup>
@@ -140,20 +212,20 @@ export const PhoneVerification: React.FC<PhoneVerificationProps> = ({ onVerifica
                   </div>
 
                   <div className="space-y-2">
-                    <Button 
+                    <Button
                       onClick={handleVerifyOtp}
                       disabled={isLoading || otp.length !== 6}
                       className="w-full"
                       size="lg"
                     >
-                      {isLoading ? 'Verifying...' : 'Verify Code'}
+                      {isLoading ? "Verifying..." : "Verify Code"}
                     </Button>
-                    
-                    <Button 
-                      variant="ghost" 
+
+                    <Button
+                      variant="ghost"
                       onClick={() => {
                         setIsOtpSent(false);
-                        setOtp('');
+                        setOtp("");
                       }}
                       className="w-full"
                     >
@@ -169,7 +241,9 @@ export const PhoneVerification: React.FC<PhoneVerificationProps> = ({ onVerifica
             <div className="text-center space-y-4">
               <div className="flex items-center justify-center gap-2 text-green-600">
                 <Shield className="w-5 h-5" />
-                <span className="font-medium">Phone Verified Successfully</span>
+                <span className="font-medium">
+                  Phone Verified Successfully
+                </span>
               </div>
               <p className="text-sm text-muted-foreground">
                 Proceeding to role selection...
@@ -178,6 +252,9 @@ export const PhoneVerification: React.FC<PhoneVerificationProps> = ({ onVerifica
           )}
         </CardContent>
       </Card>
+
+      {/* ✅ Required for Firebase reCAPTCHA */}
+      <div id="recaptcha-container"></div>
     </div>
   );
 };
