@@ -1,17 +1,36 @@
-// /src/components/Dashboard.tsx
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusIndicator } from "@/components/StatusIndicator";
+import { Input } from "@/components/ui/input";
+import { TopUp } from "@/components/TopUp";
 import QuickReport from "@/components/QuickReport";
-import { Bus, Clock, Users, AlertTriangle, CreditCard, TrendingUp, Navigation } from "lucide-react";
-import {auth, db } from "../lib/firebase";
-import { collection, query, where, onSnapshot, doc,updateDoc, onSnapshot as onDocSnapshot, DocumentData } from "firebase/firestore";
+import {
+  Bus,
+  Clock,
+  MapPin,
+  Plus,
+  Users,
+  AlertTriangle,
+  CreditCard,
+  TrendingUp,
+  Navigation,
+} from "lucide-react";
+import { auth, db } from "../lib/firebase";
+import {
+  collection,
+  query,
+  where,
+  onSnapshot,
+  doc,
+  updateDoc,
+  onSnapshot as onDocSnapshot,
+  DocumentData,
+} from "firebase/firestore";
 import { useAuth } from "../context/AuthContext";
-
+import { VirtualCard } from "@/components/VirtualCard";
 
 type UserMode = "commuter" | "driver";
-import { VirtualCard } from '@/components/VirtualCard';
 
 type BusType = {
   id: string;
@@ -44,42 +63,38 @@ interface DashboardProps {
   userData: UserData;
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({ userMode }) => {
+export const Dashboard: React.FC<DashboardProps> = ({ userMode, userData }) => {
   const { user } = useAuth();
   const [bus, setBus] = useState<BusType | null>(null);
   const [route, setRoute] = useState<RouteType | null>(null);
   const [loading, setLoading] = useState(true);
   const [newCapacity, setNewCapacity] = useState<number | "">("");
+  const [topUpAmount, setTopUpAmount] = useState<number>();
+  const [showTopUp, setShowTopUp] = useState(false);
 
-
-
+  const quickAmounts = [50, 100, 200, 300];
   const driverId = user?.uid;
 
-
-  console.log("Auth user:", user);
-
+  // Capacity update
   const handleCapacityUpdate = async () => {
     if (!bus || newCapacity === "") return;
-      try {
-        const updated = Number(newCapacity);
-        await updateDoc(doc(db, "buses", bus.id), {
-          current_capacity:updated,
-        });
-        setBus({ ...bus, current_capacity: updated });
-
-        setNewCapacity(""); // reset input
-      } catch (err) {
-        console.error("Error updating capacity:", err);
-      }
-    };
+    try {
+      const updated = Number(newCapacity);
+      await updateDoc(doc(db, "buses", bus.id), {
+        current_capacity: updated,
+      });
+      setBus({ ...bus, current_capacity: updated });
+      setNewCapacity("");
+    } catch (err) {
+      console.error("Error updating capacity:", err);
+    }
+  };
 
   // Subscribe to bus assigned to driver
   useEffect(() => {
     if (!driverId) return;
     const q = query(collection(db, "buses"), where("driver_id", "==", driverId));
     const unsub = onSnapshot(q, (snap) => {
-      console.log("Bus snapshot updated:", snap.docs.map(d => d.data())); // 👈 add this
-      
       if (snap.empty) {
         setBus(null);
         setRoute(null);
@@ -139,13 +154,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode }) => {
           <div className="grid grid-cols-2 gap-4">
             <div className="text-center p-4 bg-muted/50 rounded-xl">
               <TrendingUp className="w-6 h-6 text-primary mx-auto mb-2" />
-              <p className="text-2xl font-bold text-foreground">{route?.stops.length ?? 0}</p>
+              <p className="text-2xl font-bold text-foreground">
+                {route?.stops.length ?? 0}
+              </p>
               <p className="text-sm text-muted-foreground">Stops</p>
             </div>
 
             <div className="text-center p-4 bg-muted/50 rounded-xl">
               <Users className="w-6 h-6 text-secondary mx-auto mb-2" />
-              <p className="text-2xl font-bold text-foreground">{bus.current_capacity}</p>
+              <p className="text-2xl font-bold text-foreground">
+                {bus.current_capacity}
+              </p>
               <p className="text-sm text-muted-foreground">Passengers</p>
             </div>
           </div>
@@ -171,7 +190,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode }) => {
                     ? "bg-status-warning"
                     : "bg-primary"
                 }`}
-                style={{ width: `${(bus.current_capacity / bus.capacity) * 100}%` }}
+                style={{
+                  width: `${(bus.current_capacity / bus.capacity) * 100}%`,
+                }}
               />
             </div>
 
@@ -191,9 +212,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode }) => {
               placeholder="Enter new capacity"
               className="w-full p-2 border rounded-lg bg-background"
             />
-
-          <Button className="metro-button-primary w-full mt-4"
-          onClick={handleCapacityUpdate} disabled={newCapacity === ""}>Update Capacity</Button>
+            <Button
+              className="metro-button-primary w-full mt-4"
+              onClick={handleCapacityUpdate}
+              disabled={newCapacity === ""}
+            >
+              Update Capacity
+            </Button>
           </div>
         </Card>
 
@@ -213,15 +238,56 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode }) => {
     );
   }
 
-  // ---------------- COMMUTER VIEW (keep your old nearbyBuses) ----------------
+  // ---------------- COMMUTER VIEW ----------------
   const nearbyBuses = [
-    { number: "243", route: "Sandton → Soweto", eta: "3 min", capacity: 85, status: "online" as const },
-    { number: "156", route: "Rosebank → Alexandra", eta: "7 min", capacity: 45, status: "online" as const },
-    { number: "089", route: "CBD → Midrand", eta: "12 min", capacity: 95, status: "warning" as const },
+    {
+      number: "243",
+      route: "Sandton → Soweto",
+      eta: "3 min",
+      capacity: 85,
+      status: "online" as const,
+    },
+    {
+      number: "156",
+      route: "Rosebank → Alexandra",
+      eta: "7 min",
+      capacity: 45,
+      status: "online" as const,
+    },
+    {
+      number: "089",
+      route: "CBD → Midrand",
+      eta: "12 min",
+      capacity: 95,
+      status: "warning" as const,
+    },
   ];
 
   return (
     <div className="p-4 space-y-6">
+      {/* Virtual Card */}
+      <div className="flex justify-center">
+        <VirtualCard
+          cardNumber={userData.cardNumber || "0000000000000000"}
+          balance={87.5}
+          holderName={userData.fullName}
+          className="mb-2"
+        />
+      </div>
+
+      {/* Balance Actions */}
+      <Card className="metro-card">
+        <div className="flex justify-center">
+          <Button
+            className="w-full max-w-sm"
+            onClick={() => setShowTopUp(true)}
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Top Up
+          </Button>
+        </div>
+      </Card>
+
       {/* Balance Card */}
       <Card className="metro-card metro-gradient-card">
         <div className="flex items-center justify-between mb-4">
@@ -235,6 +301,69 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode }) => {
         </div>
         <Button className="metro-button-primary w-full">Top Up Wallet</Button>
       </Card>
+
+      {/* Top-Up Modal */}
+      {showTopUp && (
+        <Card className="metro-card border-primary/20">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="metro-subheading">Top Up Wallet</h3>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowTopUp(false)}
+            >
+              ✕
+            </Button>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">
+                Please enter a minimum of R50
+              </label>
+              <Input
+                type="number"
+                placeholder="0.00"
+                value={topUpAmount}
+                onChange={(e) => setTopUpAmount(Number(e.target.value))}
+                className="text-lg"
+              />
+            </div>
+
+            <div>
+              <p className="text-sm font-medium text-foreground mb-2">
+                Quick Amounts
+              </p>
+              <div className="grid grid-cols-4 gap-2">
+                {quickAmounts.map((amount) => (
+                  <Button
+                    key={amount}
+                    variant="outline"
+                    onClick={() => setTopUpAmount(amount)}
+                    className="text-sm"
+                  >
+                    R{amount}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            {/* Google Pay button container */}
+            <div className="flex justify-center mt-4">
+              {topUpAmount && topUpAmount >= 50 ? (
+                <TopUp
+                  topUpAmount={topUpAmount}
+                  onClose={() => setShowTopUp(false)}
+                />
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Enter R50 or more to enable Google Pay
+                </p>
+              )}
+            </div>
+          </div>
+        </Card>
+      )}
 
       {/* Nearby Buses */}
       <Card className="metro-card">
@@ -265,7 +394,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode }) => {
                   <Clock className="w-4 h-4 text-muted-foreground" />
                   <span className="font-medium text-foreground">{bus.eta}</span>
                 </div>
-                <StatusIndicator status={bus.status} /*capacity={bus.capacity}*/ />
+                <StatusIndicator status={bus.status} />
               </div>
             </div>
           ))}

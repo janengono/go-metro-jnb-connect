@@ -10,23 +10,23 @@ import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { User, Settings, LogOut, AlertCircle } from "lucide-react";
 
 type ProfileDropdownProps = {
+  holderName: string,
+  cellNumber : string,
   onLogout: () => void;
-  onViewProfile: () => void;
-  onEditProfile: () => void;
   onReportCard?: () => void;
   trigger: React.ReactNode; // 👈 any button or element can be passed in
 };
 
 export const ProfileDropdown = ({
+  holderName,
+  cellNumber,
   onLogout,
-  onViewProfile,
-  onEditProfile,
   onReportCard,
   trigger,
 }: ProfileDropdownProps): JSX.Element => {
   const user = {
-    name: "Alex Johnson",
-    email: "alex@example.com",
+    name: holderName,
+    phoneNumber: cellNumber,
     avatar: "",
   };
 
@@ -39,21 +39,15 @@ export const ProfileDropdown = ({
       <DropdownMenuContent className="w-56" align="end" forceMount>
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">{user.name}</p>
+            <p className="text-sm font-medium leading-none">{user.name.toUpperCase()}</p>
             <p className="text-xs leading-none text-muted-foreground">
-              {user.email}
+              {user.phoneNumber}
             </p>
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={onViewProfile}>
-          <User className="mr-2 h-4 w-4" />
-          <span>View Profile</span>
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={onEditProfile}>
-          <Settings className="mr-2 h-4 w-4" />
-          <span>Edit Profile</span>
-        </DropdownMenuItem>
+        
+        
         {onReportCard && (
           <DropdownMenuItem onClick={onReportCard} className="text-destructive">
             <AlertCircle className="mr-2 h-4 w-4" />

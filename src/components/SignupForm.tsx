@@ -7,7 +7,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { User, CreditCard, IdCard, Phone, AlertCircle, CheckCircle, QrCode } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { QRScanner } from '@/components/QRScanner';
-import cityBackground from '@/assets/city-background.jpg';
+import cityBackground from '@/assets/hero-bg.jpg';
 
 type UserRole = 'commuter' | 'driver';
 
@@ -160,6 +160,7 @@ export const SignupForm: React.FC<SignupFormProps> = ({
                       <QrCode className="w-4 h-4" />
                     </Button>
                   </QRScanner>
+
                 </div>
                 <p className="text-xs text-muted-foreground">
                   Scan the QR code on your physical bus card or enter manually

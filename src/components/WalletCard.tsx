@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import {TopUp} from '@/components/TopUp';
 import { 
   CreditCard, 
   Plus, 
@@ -23,8 +24,9 @@ interface Transaction {
 }
 
 export const WalletCard: React.FC = () => {
-  const [topUpAmount, setTopUpAmount] = useState('');
+  
   const [showTopUp, setShowTopUp] = useState(false);
+   const [topUpAmount, setTopUpAmount] = useState<number>();
 
   const currentBalance = 87.50;
   const monthlySpending = 324.80;
@@ -63,13 +65,13 @@ export const WalletCard: React.FC = () => {
     }
   ];
 
-  const quickAmounts = [20, 50, 100, 200];
+  const quickAmounts = [ 50, 100, 200, 300];
 
   const handleTopUp = (amount: number) => {
     // Handle top-up logic
     console.log(`Topping up R${amount}`);
     setShowTopUp(false);
-    setTopUpAmount('');
+    
   };
 
   return (
@@ -103,6 +105,65 @@ export const WalletCard: React.FC = () => {
         </div>
       </Card>
 
+           {/* Top-Up Modal */}
+{showTopUp && (
+            <Card className="metro-card border-primary/20">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="metro-subheading">Top Up Wallet</h3>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => setShowTopUp(false)}
+                >
+                  ✕
+                </Button>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">
+                    Please enter a minimum of R50
+                  </label>
+                  <Input
+                    type="number"
+                    placeholder="0.00"
+                    value={topUpAmount}
+                    onChange={(e) => setTopUpAmount(Number(e.target.value))}
+                    className="text-lg"
+                  />
+                </div>
+                
+                <div>
+                  <p className="text-sm font-medium text-foreground mb-2">Quick Amounts</p>
+                  <div className="grid grid-cols-4 gap-2">
+                    {quickAmounts.map((amount) => (
+                      <Button
+                        key={amount}
+                        variant="outline"
+                        onClick={() => setTopUpAmount(amount)}
+                        className="text-sm"
+                      >
+                        R{amount}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Google Pay button container */}
+                <div className="flex justify-center mt-4">
+                  {topUpAmount >= 50 ? (
+                    <TopUp topUpAmount={topUpAmount} 
+                     onClose={() => setShowTopUp(false)} />
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      Enter R50 or more to enable Google Pay
+                    </p>
+                  )}
+                </div>
+              </div>
+            </Card>
+              )}
+
       {/* Monthly Overview */}
       <Card className="metro-card">
         <div className="flex items-center justify-between mb-4">
@@ -123,60 +184,7 @@ export const WalletCard: React.FC = () => {
         </div>
       </Card>
 
-      {/* Top-Up Modal */}
-      {showTopUp && (
-        <Card className="metro-card border-primary/20">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="metro-subheading">Top Up Wallet</h3>
-            <Button 
-              variant="ghost" 
-              size="sm"
-              onClick={() => setShowTopUp(false)}
-            >
-              ✕
-            </Button>
-          </div>
-          
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">
-                Enter Amount (R)
-              </label>
-              <Input
-                type="number"
-                placeholder="0.00"
-                value={topUpAmount}
-                onChange={(e) => setTopUpAmount(e.target.value)}
-                className="text-lg"
-              />
-            </div>
-            
-            <div>
-              <p className="text-sm font-medium text-foreground mb-2">Quick Amounts</p>
-              <div className="grid grid-cols-4 gap-2">
-                {quickAmounts.map((amount) => (
-                  <Button
-                    key={amount}
-                    variant="outline"
-                    onClick={() => handleTopUp(amount)}
-                    className="text-sm"
-                  >
-                    R{amount}
-                  </Button>
-                ))}
-              </div>
-            </div>
-            
-            <Button 
-              className="metro-button-primary w-full"
-              disabled={!topUpAmount || parseFloat(topUpAmount) <= 0}
-              onClick={() => handleTopUp(parseFloat(topUpAmount))}
-            >
-              Top Up R{topUpAmount || '0.00'}
-            </Button>
-          </div>
-        </Card>
-      )}
+ 
 
       {/* Recent Transactions */}
       <Card className="metro-card">

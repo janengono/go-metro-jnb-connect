@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { Phone, Shield, CheckCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import cityBackground from '@/assets/city-background.jpg';
+import cityBackground from '@/assets/hero-bg.jpg';
 
 interface PhoneVerificationProps {
   onVerificationComplete: (phoneNumber: string) => void;
@@ -77,6 +77,7 @@ export const PhoneVerification: React.FC<PhoneVerificationProps> = ({ onVerifica
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat'
       }}
+
     >
       <Card className="w-full max-w-md backdrop-blur-sm bg-card/95">
         <CardHeader className="text-center">
@@ -88,12 +89,12 @@ export const PhoneVerification: React.FC<PhoneVerificationProps> = ({ onVerifica
             )}
           </div>
           <CardTitle className="text-2xl">
-            {isVerified ? 'Phone Verified!' : 'Verify Your Phone'}
+            {isVerified ? 'Phone number Verified!' : ''}
           </CardTitle>
           <CardDescription>
             {isVerified 
               ? 'You can now proceed to select your role'
-              : 'Enter your phone number to get started with GoMetro'
+              : 'Please enter your phone number to get started with GoMetro'
             }
           </CardDescription>
         </CardHeader>
