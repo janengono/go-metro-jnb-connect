@@ -226,7 +226,7 @@ useEffect(() => {
           <div className="flex items-center justify-between mb-4">
             <h2 className="metro-subheading">Driver Dashboard</h2>
             <StatusIndicator
-              status={getCapacityStatus(bus.current_capacity, bus.capacity) as
+              status={getCapacityStatus(bus.current_capacity) as
                 "online" | "full" | "warning" | "offline"}
             />
             </div>
@@ -449,7 +449,7 @@ useEffect(() => {
                   <span className="font-medium text-foreground">ETA unknown</span>
                 </div>
                 <StatusIndicator
-                  status={getCapacityStatus(bus.current_capacity, bus.capacity) as
+                  status={getCapacityStatus(bus.current_capacity) as
                     "online" | "full" | "warning" | "offline"}
                 />
               </div>
