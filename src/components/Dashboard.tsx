@@ -8,15 +8,13 @@ import QuickReport from "@/components/QuickReport";
 import {
   Bus,
   Clock,
-  MapPin,
   Plus,
   Users,
   AlertTriangle,
-  CreditCard,
   TrendingUp,
   Navigation,
 } from "lucide-react";
-import { auth, db } from "../lib/firebase";
+import { db } from "../lib/firebase";
 import {
   collection,
   query,
@@ -34,22 +32,22 @@ import { VirtualCard } from "@/components/VirtualCard";
 
 type UserMode = "commuter" | "driver";
 
-type BusType = {
+interface BusType {
   id: string;
   bus_number: string;
   route_id: string;
   capacity: number;
   current_capacity: number;
   status: string;
-};
+}
 
-type RouteType = {
+interface RouteType {
   id: string;
   route_name: string;
   start_point: string;
   end_point: string;
   stops: string[];
-};
+}
 
 interface UserData {
   fullName: string;
@@ -65,6 +63,14 @@ interface DashboardProps {
   userData: UserData;
 }
 
+interface ReportType {
+  busId: string;
+  type: string;
+  details: string;
+  timestamp: string;
+  reporterId?: string | null;
+}
+
 export const Dashboard: React.FC<DashboardProps> = ({ userMode, userData }) => {
   const { user } = useAuth();
   const [bus, setBus] = useState<BusType | null>(null);
@@ -73,11 +79,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode, userData }) => {
   const [newCapacity, setNewCapacity] = useState<number | "">("");
   const [topUpAmount, setTopUpAmount] = useState<number>();
   const [showTopUp, setShowTopUp] = useState(false);
-  const [userBalance, setUserBalance] = useState<number>(0);
-  const [balanceLoading, setBalanceLoading] = useState(true);
+
+  const [nearbyBuses, setNearbyBuses] = useState<BusType[]>([]);
+  const [selectedBus, setSelectedBus] = useState<BusType | null>(null);
+  const [currentReport, setCurrentReport] = useState<ReportType | null>(null);
+
 
   const quickAmounts = [50, 100, 200, 300];
   const driverId = user?.uid;
+
 
   // Initialize user document with balance if it doesn't exist
   const initializeUserDocument = async () => {
@@ -132,6 +142,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode, userData }) => {
   }, [user?.uid]);
 
   // Capacity update
+
   const handleCapacityUpdate = async () => {
     if (!bus || newCapacity === "") return;
     try {
@@ -145,8 +156,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode, userData }) => {
       console.error("Error updating capacity:", err);
     }
   };
+  const getCapacityStatus = (current: number) => {
+      if (current < 60) return "online";     // ✅ Available
+      if (current <= 80) return "full";      // ✅ Full
+      return "warning";                      // ✅ Overcapacity
+    };
 
-  // Subscribe to bus assigned to driver
+  // ---------------- DRIVER: Subscribe to assigned bus ----------------
   useEffect(() => {
     if (!driverId) return;
     const q = query(collection(db, "buses"), where("driver_id", "==", driverId));
@@ -172,7 +188,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode, userData }) => {
     return () => unsub();
   }, [driverId]);
 
-  // Subscribe to route doc
+  // ---------------- DRIVER: Subscribe to route ----------------
   useEffect(() => {
     if (!bus?.route_id) return;
     const unsub = onDocSnapshot(doc(db, "routes", bus.route_id), (snap) => {
@@ -191,6 +207,69 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode, userData }) => {
     });
     return () => unsub();
   }, [bus?.route_id]);
+  //if (loading) return <div className="p-6">Loading dashboard…</div>;
+  // ---------------- COMMUTER: Nearby buses ----------------
+  // Subscribe to nearby buses
+useEffect(() => {
+  if (userMode !== "commuter") return;
+  const q = query(collection(db, "buses"));
+  const unsub = onSnapshot(q, (snapshot) => {
+    const buses: BusType[] = snapshot.docs.map((doc) => {
+      const data = doc.data() as DocumentData;
+      return {
+        id: doc.id,
+        bus_number: data.bus_number,
+        route_id: data.route_id,
+        capacity: data.capacity,
+        current_capacity: data.current_capacity,
+        status: data.status,
+      };
+    });
+    setNearbyBuses(buses);
+    if (buses.length > 0 && !selectedBus) setSelectedBus(buses[0]);
+  });
+  return () => unsub();
+}, [userMode, selectedBus]);
+
+// Ensure selectedBus updates when nearbyBuses changes
+useEffect(() => {
+  if (!selectedBus) return;
+  const updated = nearbyBuses.find((b) => b.id === selectedBus.id);
+  if (updated) setSelectedBus(updated);
+}, [nearbyBuses]);
+
+
+  // DRIVER: Subscribe to latest report for driver bus
+  useEffect(() => {
+    if (userMode !== "driver" || !bus?.id) return;
+
+    const reportRef = doc(db, "reports", bus.id);
+    const unsub = onDocSnapshot(reportRef, (snap) => {
+      if (!snap.exists()) {
+        setCurrentReport(null);
+        return;
+      }
+      setCurrentReport(snap.data() as ReportType);
+    });
+
+    return () => unsub();
+  }, [userMode, bus?.id]);
+
+  // COMMUTER: Subscribe to latest report for selected bus
+    useEffect(() => {
+      if (userMode !== "commuter" || !selectedBus?.id) return;
+
+      const reportRef = doc(db, "reports", selectedBus.id);
+      const unsub = onDocSnapshot(reportRef, (snap) => {
+        if (!snap.exists()) {
+          setCurrentReport(null);
+          return;
+        }
+        setCurrentReport(snap.data() as ReportType);
+      });
+
+      return () => unsub();
+    }, [userMode, selectedBus?.id]);
 
   // Handle balance update callback
   const handleBalanceUpdate = (incrementAmount: number) => {
@@ -217,8 +296,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode, userData }) => {
         <Card className="metro-card">
           <div className="flex items-center justify-between mb-4">
             <h2 className="metro-subheading">Driver Dashboard</h2>
-            <StatusIndicator status={bus.status as "online" | "warning"} />
-          </div>
+            <StatusIndicator
+              status={getCapacityStatus(bus.current_capacity) as
+                "online" | "full" | "warning" | "offline"}
+            />
+            </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="text-center p-4 bg-muted/50 rounded-xl">
@@ -291,6 +373,23 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode, userData }) => {
           </div>
         </Card>
 
+        {/* Last Report */}
+        {currentReport && (
+          <Card className="metro-card mt-4">
+            <h3 className="metro-subheading mb-2">Last Report</h3>
+            <p>
+              <strong>Type:</strong> {currentReport.type}
+            </p>
+            <p>
+              <strong>Details:</strong> {currentReport.details}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              <strong>Reported at:</strong>{" "}
+              {new Date(currentReport.timestamp).toLocaleString()}
+            </p>
+          </Card>
+        )}
+
         {/* Quick Actions */}
         <Card className="card-elevated animate-slide-up">
           <CardHeader>
@@ -300,7 +399,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode, userData }) => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <QuickReport userMode={userMode} />
+            <QuickReport userMode={userMode} bus={bus} user={user} />
           </CardContent>
         </Card>
       </div>
@@ -308,30 +407,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode, userData }) => {
   }
 
   // ---------------- COMMUTER VIEW ----------------
-  const nearbyBuses = [
-    {
-      number: "243",
-      route: "Sandton → Soweto",
-      eta: "3 min",
-      capacity: 85,
-      status: "online" as const,
-    },
-    {
-      number: "156",
-      route: "Rosebank → Alexandra",
-      eta: "7 min",
-      capacity: 45,
-      status: "online" as const,
-    },
-    {
-      number: "089",
-      route: "CBD → Midrand",
-      eta: "12 min",
-      capacity: 95,
-      status: "warning" as const,
-    },
-  ];
-
   return (
     <div className="p-4 space-y-6">
       {/* Virtual Card */}
@@ -353,11 +428,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode, userData }) => {
       {/* Balance Actions */}
       <Card className="metro-card">
         <div className="flex justify-center">
+
           <Button
             className="w-full max-w-sm"
             onClick={() => setShowTopUp(true)}
             disabled={balanceLoading}
           >
+
             <Plus className="w-4 h-4 mr-2" />
             Top Up
           </Button>
@@ -369,11 +446,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode, userData }) => {
         <Card className="metro-card border-primary/20">
           <div className="flex items-center justify-between mb-4">
             <h3 className="metro-subheading">Top Up Wallet</h3>
+
             <Button
               variant="ghost"
               size="sm"
               onClick={handleTopUpClose}
             >
+
               ✕
             </Button>
           </div>
@@ -396,9 +475,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode, userData }) => {
             </div>
 
             <div>
-              <p className="text-sm font-medium text-foreground mb-2">
-                Quick Amounts
-              </p>
+              <p className="text-sm font-medium text-foreground mb-2">Quick Amounts</p>
               <div className="grid grid-cols-4 gap-2">
                 {quickAmounts.map((amount) => (
                   <Button
@@ -413,9 +490,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode, userData }) => {
               </div>
             </div>
 
-            {/* Google Pay button container */}
             <div className="flex justify-center mt-4">
               {topUpAmount && topUpAmount >= 50 ? (
+
                 <TopUp
                   topUpAmount={topUpAmount}
                   onClose={handleTopUpClose}
@@ -443,37 +520,65 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode, userData }) => {
       <Card className="metro-card">
         <div className="flex items-center justify-between mb-4">
           <h2 className="metro-subheading">Nearby Buses</h2>
-          <Button variant="ghost" size="sm" className="text-primary">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-primary"
+            onClick={() => {}}
+          >
             Refresh
           </Button>
         </div>
         <div className="space-y-3">
           {nearbyBuses.map((bus, index) => (
             <div
-              key={bus.number}
-              className="flex items-center justify-between p-4 bg-muted/30 rounded-xl metro-fade-in"
+              key={bus.id}
+              className={`flex items-center justify-between p-4 rounded-xl metro-fade-in cursor-pointer ${
+                selectedBus?.id === bus.id ? "bg-primary/20" : "bg-muted/30"
+              }`}
               style={{ animationDelay: `${index * 0.1}s` }}
+              onClick={() => setSelectedBus(bus)}
             >
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-primary/10 rounded-lg">
                   <Bus className="w-5 h-5 text-primary" />
                 </div>
                 <div>
-                  <p className="font-semibold text-foreground">Bus {bus.number}</p>
-                  <p className="text-sm text-muted-foreground">{bus.route}</p>
+                  <p className="font-semibold text-foreground">Bus {bus.bus_number}</p>
+                  <p className="text-sm text-muted-foreground">Route: {bus.route_id}</p>
                 </div>
               </div>
               <div className="text-right">
                 <div className="flex items-center gap-2 mb-1">
                   <Clock className="w-4 h-4 text-muted-foreground" />
-                  <span className="font-medium text-foreground">{bus.eta}</span>
+                  <span className="font-medium text-foreground">ETA unknown</span>
                 </div>
-                <StatusIndicator status={bus.status} />
+                <StatusIndicator
+                  status={getCapacityStatus(bus.current_capacity) as
+                    "online" | "full" | "warning" | "offline"}
+                />
               </div>
             </div>
           ))}
         </div>
       </Card>
+
+      {/* Last Report */}
+      {currentReport && (
+        <Card className="metro-card mt-4">
+          <h3 className="metro-subheading mb-2">Last Report</h3>
+          <p>
+            <strong>Type:</strong> {currentReport.type}
+          </p>
+          <p>
+            <strong>Details:</strong> {currentReport.details}
+          </p>
+          <p className="text-sm text-muted-foreground">
+            <strong>Reported at:</strong>{" "}
+            {new Date(currentReport.timestamp).toLocaleString()}
+          </p>
+        </Card>
+      )}
 
       {/* Quick Actions */}
       <Card className="card-elevated animate-slide-up">
@@ -484,7 +589,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode, userData }) => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <QuickReport userMode={userMode} />
+          {selectedBus && (
+            <QuickReport userMode={userMode} bus={selectedBus} user={user} />
+          )}
         </CardContent>
       </Card>
     </div>
