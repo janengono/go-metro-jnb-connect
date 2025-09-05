@@ -49,8 +49,12 @@ export const WalletCard: React.FC = () => {
   const [topUpAmount, setTopUpAmount] = useState<number>();
   const [userBalance, setUserBalance] = useState<number>(0);
   const [balanceLoading, setBalanceLoading] = useState(true);
+
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [transactionsLoading, setTransactionsLoading] = useState(true);
+
+  const [showLowBalanceToast, setShowLowBalanceToast] = useState(false);
+
 
   const monthlySpending = 324.80; // This could also be calculated from transactions
 
@@ -105,6 +109,7 @@ export const WalletCard: React.FC = () => {
     return () => unsubscribe();
   }, [user?.uid]);
 
+
   // Subscribe to user transactions
   useEffect(() => {
     if (!user?.uid) return;
@@ -139,6 +144,103 @@ export const WalletCard: React.FC = () => {
     
     return () => unsubscribe();
   }, [user?.uid]);
+
+    useEffect(() => {
+        if (userBalance <= 50 && !balanceLoading) {
+          setShowLowBalanceToast(true);
+        } else {
+          setShowLowBalanceToast(false);
+        }
+      }, [userBalance, balanceLoading]);
+      
+      useEffect(() => {
+        if (showLowBalanceToast) {
+          const timer = setTimeout(() => setShowLowBalanceToast(false), 10000);
+          return () => clearTimeout(timer);
+        }
+      }, [showLowBalanceToast]);
+
+  // Extended transaction history with more entries
+  const allTransactions: Transaction[] = [
+    {
+      id: '1',
+      type: 'payment',
+      amount: -8.50,
+      description: 'Bus Fare',
+      date: '2024-08-30 14:23',
+      busNumber: '243'
+    },
+    {
+      id: '2',
+      type: 'payment',
+      amount: -8.50,
+      description: 'Bus Fare',
+      date: '2024-08-30 08:15',
+      busNumber: '156'
+    },
+    {
+      id: '3',
+      type: 'topup',
+      amount: 100.00,
+      description: 'Wallet Top-up',
+      date: '2024-08-29 19:42'
+    },
+    {
+      id: '4',
+      type: 'payment',
+      amount: -8.50,
+      description: 'Bus Fare',
+      date: '2024-08-29 17:30',
+      busNumber: '089'
+    },
+    {
+      id: '5',
+      type: 'payment',
+      amount: -8.50,
+      description: 'Bus Fare',
+      date: '2024-08-29 09:15',
+      busNumber: '243'
+    },
+    {
+      id: '6',
+      type: 'topup',
+      amount: 50.00,
+      description: 'Wallet Top-up',
+      date: '2024-08-28 20:30'
+    },
+    {
+      id: '7',
+      type: 'payment',
+      amount: -8.50,
+      description: 'Bus Fare',
+      date: '2024-08-28 16:45',
+      busNumber: '156'
+    },
+    {
+      id: '8',
+      type: 'payment',
+      amount: -8.50,
+      description: 'Bus Fare',
+      date: '2024-08-28 07:20',
+      busNumber: '089'
+    },
+    {
+      id: '9',
+      type: 'topup',
+      amount: 200.00,
+      description: 'Wallet Top-up',
+      date: '2024-08-27 18:15'
+    },
+    {
+      id: '10',
+      type: 'payment',
+      amount: -8.50,
+      description: 'Bus Fare',
+      date: '2024-08-27 15:30',
+      busNumber: '243'
+    }
+  ];
+
 
   // Show only recent transactions when not in history mode
   const recentTransactions = transactions.slice(0, 4);
@@ -291,6 +393,15 @@ export const WalletCard: React.FC = () => {
   // Default wallet view
   return (
     <div className="p-4 space-y-6">
+      {/* Low Balance Toast */}
+        {showLowBalanceToast && (
+          <div className="fixed top-4 right-4 z-50 bg-white  px-6 py-3 square shadow-lg">
+            <span className="text-red-600 ">
+              ⚠️ Your balance : R{userBalance.toFixed(2)} is low!
+            </span>
+            
+          </div>
+        )}
       {/* Balance Card */}
       <Card className="metro-card metro-gradient-card">
         <div className="flex items-center justify-between mb-6">
