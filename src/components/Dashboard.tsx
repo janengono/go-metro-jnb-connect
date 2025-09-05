@@ -24,8 +24,6 @@ import {
   updateDoc,
   onSnapshot as onDocSnapshot,
   DocumentData,
-  setDoc,
-  getDoc,
 } from "firebase/firestore";
 import { useAuth } from "../context/AuthContext";
 import { VirtualCard } from "@/components/VirtualCard";
@@ -79,70 +77,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode, userData }) => {
   const [newCapacity, setNewCapacity] = useState<number | "">("");
   const [topUpAmount, setTopUpAmount] = useState<number>();
   const [showTopUp, setShowTopUp] = useState(false);
-
   const [nearbyBuses, setNearbyBuses] = useState<BusType[]>([]);
   const [selectedBus, setSelectedBus] = useState<BusType | null>(null);
   const [currentReport, setCurrentReport] = useState<ReportType | null>(null);
 
-
   const quickAmounts = [50, 100, 200, 300];
   const driverId = user?.uid;
 
-
-  // Initialize user document with balance if it doesn't exist
-  const initializeUserDocument = async () => {
-    if (!user?.uid) return;
-    
-    try {
-      const userDocRef = doc(db, "users", user.uid);
-      const userDoc = await getDoc(userDocRef);
-      
-      if (!userDoc.exists()) {
-        // Create user document with initial balance
-        await setDoc(userDocRef, {
-          ...userData,
-          balance: 0,
-          transactions: 0,
-          createdAt: new Date(),
-          updatedAt: new Date()
-        });
-      } else {
-        // Check if balance field exists, if not add it
-        const data = userDoc.data();
-        if (data.balance === undefined) {
-          await updateDoc(userDocRef, {
-            balance: 0,
-            transactions: data.transactions || 0,
-            updatedAt: new Date()
-          });
-        }
-      }
-    } catch (error) {
-      console.error("Error initializing user document:", error);
-    }
-  };
-
-  // Subscribe to user balance changes
-  useEffect(() => {
-    if (!user?.uid) return;
-    
-    // Initialize user document first
-    initializeUserDocument();
-    
-    const userDocRef = doc(db, "users", user.uid);
-    const unsubscribe = onDocSnapshot(userDocRef, (doc) => {
-      if (doc.exists()) {
-        const data = doc.data();
-        setUserBalance(data.balance || 0);
-      }
-      setBalanceLoading(false);
-    });
-    
-    return () => unsubscribe();
-  }, [user?.uid]);
-
-  // Capacity update
-
+  // ---------------- DRIVER: Capacity update ----------------
   const handleCapacityUpdate = async () => {
     if (!bus || newCapacity === "") return;
     try {
@@ -271,19 +213,6 @@ useEffect(() => {
       return () => unsub();
     }, [userMode, selectedBus?.id]);
 
-  // Handle balance update callback
-  const handleBalanceUpdate = (incrementAmount: number) => {
-    // Don't update local state - let Firestore listener handle it
-    // This prevents double updates
-    setTopUpAmount(undefined);
-  };
-
-  // Handle top-up modal close
-  const handleTopUpClose = () => {
-    setShowTopUp(false);
-    setTopUpAmount(undefined);
-  };
-
   if (loading) return <div className="p-6">Loading dashboard…</div>;
 
   // ---------------- DRIVER VIEW ----------------
@@ -411,30 +340,18 @@ useEffect(() => {
     <div className="p-4 space-y-6">
       {/* Virtual Card */}
       <div className="flex justify-center">
-        {balanceLoading ? (
-          <div className="flex items-center justify-center p-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          </div>
-        ) : (
-          <VirtualCard
-            cardNumber={userData.cardNumber || "0000000000000000"}
-            balance={userBalance}
-            holderName={userData.fullName}
-            className="mb-2"
-          />
-        )}
+        <VirtualCard
+          cardNumber={userData.cardNumber || "0000000000000000"}
+          balance={87.5}
+          holderName={userData.fullName}
+          className="mb-2"
+        />
       </div>
 
       {/* Balance Actions */}
       <Card className="metro-card">
         <div className="flex justify-center">
-
-          <Button
-            className="w-full max-w-sm"
-            onClick={() => setShowTopUp(true)}
-            disabled={balanceLoading}
-          >
-
+          <Button className="w-full max-w-sm" onClick={() => setShowTopUp(true)}>
             <Plus className="w-4 h-4 mr-2" />
             Top Up
           </Button>
@@ -446,13 +363,7 @@ useEffect(() => {
         <Card className="metro-card border-primary/20">
           <div className="flex items-center justify-between mb-4">
             <h3 className="metro-subheading">Top Up Wallet</h3>
-
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleTopUpClose}
-            >
-
+            <Button variant="ghost" size="sm" onClick={() => setShowTopUp(false)}>
               ✕
             </Button>
           </div>
@@ -460,15 +371,12 @@ useEffect(() => {
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">
-                Current Balance: R{userBalance.toFixed(2)}
-              </label>
-              <label className="block text-sm font-medium text-foreground mb-2">
                 Please enter a minimum of R50
               </label>
               <Input
                 type="number"
                 placeholder="0.00"
-                value={topUpAmount || ""}
+                value={topUpAmount}
                 onChange={(e) => setTopUpAmount(Number(e.target.value))}
                 className="text-lg"
               />
@@ -492,26 +400,13 @@ useEffect(() => {
 
             <div className="flex justify-center mt-4">
               {topUpAmount && topUpAmount >= 50 ? (
-
-                <TopUp
-                  topUpAmount={topUpAmount}
-                  onClose={handleTopUpClose}
-                  onBalanceUpdate={handleBalanceUpdate}
-                />
+                <TopUp topUpAmount={topUpAmount} onClose={() => setShowTopUp(false)} />
               ) : (
                 <p className="text-sm text-muted-foreground">
                   Enter R50 or more to enable Google Pay
                 </p>
               )}
             </div>
-
-            {topUpAmount && topUpAmount >= 50 && (
-              <div className="text-center pt-2 border-t">
-                <p className="text-sm text-muted-foreground">
-                  New balance will be: R{(userBalance + topUpAmount).toFixed(2)}
-                </p>
-              </div>
-            )}
           </div>
         </Card>
       )}
