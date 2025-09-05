@@ -144,28 +144,37 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode, userData }) => {
     });
     return () => unsub();
   }, [bus?.route_id]);
-
+  //if (loading) return <div className="p-6">Loading dashboard…</div>;
   // ---------------- COMMUTER: Nearby buses ----------------
-  useEffect(() => {
-    if (userMode !== "commuter") return;
-    const q = query(collection(db, "buses"));
-    const unsub = onSnapshot(q, (snapshot) => {
-      const buses: BusType[] = snapshot.docs.map((doc) => {
-        const data = doc.data() as DocumentData;
-        return {
-          id: doc.id,
-          bus_number: data.bus_number,
-          route_id: data.route_id,
-          capacity: data.capacity,
-          current_capacity: data.current_capacity,
-          status: data.status,
-        };
-      });
-      setNearbyBuses(buses);
-      if (buses.length > 0 && !selectedBus) setSelectedBus(buses[0]);
+  // Subscribe to nearby buses
+useEffect(() => {
+  if (userMode !== "commuter") return;
+  const q = query(collection(db, "buses"));
+  const unsub = onSnapshot(q, (snapshot) => {
+    const buses: BusType[] = snapshot.docs.map((doc) => {
+      const data = doc.data() as DocumentData;
+      return {
+        id: doc.id,
+        bus_number: data.bus_number,
+        route_id: data.route_id,
+        capacity: data.capacity,
+        current_capacity: data.current_capacity,
+        status: data.status,
+      };
     });
-    return () => unsub();
-  }, [userMode, selectedBus]);
+    setNearbyBuses(buses);
+    if (buses.length > 0 && !selectedBus) setSelectedBus(buses[0]);
+  });
+  return () => unsub();
+}, [userMode, selectedBus]);
+
+// Ensure selectedBus updates when nearbyBuses changes
+useEffect(() => {
+  if (!selectedBus) return;
+  const updated = nearbyBuses.find((b) => b.id === selectedBus.id);
+  if (updated) setSelectedBus(updated);
+}, [nearbyBuses]);
+
 
   // ---------------- Subscribe to latest report ----------------
   useEffect(() => {
