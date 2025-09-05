@@ -26,6 +26,8 @@ import {
   updateDoc,
   onSnapshot as onDocSnapshot,
   DocumentData,
+  setDoc,
+  getDoc,
 } from "firebase/firestore";
 import { useAuth } from "../context/AuthContext";
 import { VirtualCard } from "@/components/VirtualCard";
@@ -71,9 +73,63 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode, userData }) => {
   const [newCapacity, setNewCapacity] = useState<number | "">("");
   const [topUpAmount, setTopUpAmount] = useState<number>();
   const [showTopUp, setShowTopUp] = useState(false);
+  const [userBalance, setUserBalance] = useState<number>(0);
+  const [balanceLoading, setBalanceLoading] = useState(true);
 
   const quickAmounts = [50, 100, 200, 300];
   const driverId = user?.uid;
+
+  // Initialize user document with balance if it doesn't exist
+  const initializeUserDocument = async () => {
+    if (!user?.uid) return;
+    
+    try {
+      const userDocRef = doc(db, "users", user.uid);
+      const userDoc = await getDoc(userDocRef);
+      
+      if (!userDoc.exists()) {
+        // Create user document with initial balance
+        await setDoc(userDocRef, {
+          ...userData,
+          balance: 0,
+          transactions: 0,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        });
+      } else {
+        // Check if balance field exists, if not add it
+        const data = userDoc.data();
+        if (data.balance === undefined) {
+          await updateDoc(userDocRef, {
+            balance: 0,
+            transactions: data.transactions || 0,
+            updatedAt: new Date()
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error initializing user document:", error);
+    }
+  };
+
+  // Subscribe to user balance changes
+  useEffect(() => {
+    if (!user?.uid) return;
+    
+    // Initialize user document first
+    initializeUserDocument();
+    
+    const userDocRef = doc(db, "users", user.uid);
+    const unsubscribe = onDocSnapshot(userDocRef, (doc) => {
+      if (doc.exists()) {
+        const data = doc.data();
+        setUserBalance(data.balance || 0);
+      }
+      setBalanceLoading(false);
+    });
+    
+    return () => unsubscribe();
+  }, [user?.uid]);
 
   // Capacity update
   const handleCapacityUpdate = async () => {
@@ -135,6 +191,19 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode, userData }) => {
     });
     return () => unsub();
   }, [bus?.route_id]);
+
+  // Handle balance update callback
+  const handleBalanceUpdate = (incrementAmount: number) => {
+    // Don't update local state - let Firestore listener handle it
+    // This prevents double updates
+    setTopUpAmount(undefined);
+  };
+
+  // Handle top-up modal close
+  const handleTopUpClose = () => {
+    setShowTopUp(false);
+    setTopUpAmount(undefined);
+  };
 
   if (loading) return <div className="p-6">Loading dashboard…</div>;
 
@@ -267,12 +336,18 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode, userData }) => {
     <div className="p-4 space-y-6">
       {/* Virtual Card */}
       <div className="flex justify-center">
-        <VirtualCard
-          cardNumber={userData.cardNumber || "0000000000000000"}
-          balance={87.5}
-          holderName={userData.fullName}
-          className="mb-2"
-        />
+        {balanceLoading ? (
+          <div className="flex items-center justify-center p-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </div>
+        ) : (
+          <VirtualCard
+            cardNumber={userData.cardNumber || "0000000000000000"}
+            balance={userBalance}
+            holderName={userData.fullName}
+            className="mb-2"
+          />
+        )}
       </div>
 
       {/* Balance Actions */}
@@ -281,14 +356,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode, userData }) => {
           <Button
             className="w-full max-w-sm"
             onClick={() => setShowTopUp(true)}
+            disabled={balanceLoading}
           >
             <Plus className="w-4 h-4 mr-2" />
             Top Up
           </Button>
         </div>
       </Card>
-
-      
 
       {/* Top-Up Modal */}
       {showTopUp && (
@@ -298,7 +372,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode, userData }) => {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setShowTopUp(false)}
+              onClick={handleTopUpClose}
             >
               ✕
             </Button>
@@ -307,12 +381,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode, userData }) => {
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">
+                Current Balance: R{userBalance.toFixed(2)}
+              </label>
+              <label className="block text-sm font-medium text-foreground mb-2">
                 Please enter a minimum of R50
               </label>
               <Input
                 type="number"
                 placeholder="0.00"
-                value={topUpAmount}
+                value={topUpAmount || ""}
                 onChange={(e) => setTopUpAmount(Number(e.target.value))}
                 className="text-lg"
               />
@@ -341,7 +418,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode, userData }) => {
               {topUpAmount && topUpAmount >= 50 ? (
                 <TopUp
                   topUpAmount={topUpAmount}
-                  onClose={() => setShowTopUp(false)}
+                  onClose={handleTopUpClose}
+                  onBalanceUpdate={handleBalanceUpdate}
                 />
               ) : (
                 <p className="text-sm text-muted-foreground">
@@ -349,6 +427,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode, userData }) => {
                 </p>
               )}
             </div>
+
+            {topUpAmount && topUpAmount >= 50 && (
+              <div className="text-center pt-2 border-t">
+                <p className="text-sm text-muted-foreground">
+                  New balance will be: R{(userBalance + topUpAmount).toFixed(2)}
+                </p>
+              </div>
+            )}
           </div>
         </Card>
       )}
