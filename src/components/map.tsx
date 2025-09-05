@@ -36,8 +36,8 @@ const RouteTracker: React.FC<RouteTrackerProps> = ({
   // Generate random starting positions
   useEffect(() => {
     const positions = Array.from({ length: 5 }, () => ({
-      top: Math.random() * 80 + 10, // between 10% - 90%
-      left: Math.random() * 80 + 10,
+      top: Math.random() * 80 + 5, // between 10% - 90%
+      left: Math.random() * 80 + 5,
     }));
     setBusPositions(positions);
   }, []);
@@ -127,7 +127,7 @@ const RouteTracker: React.FC<RouteTrackerProps> = ({
             color: "white",
             fontWeight: "bold",
             zIndex: 10,
-            transition: "top 1.5s ease, left 1.5s ease", // smooth movement
+            transition: "top 2.5s ease, left 2.5s ease", // smooth movement
           }}
         >
           🚌

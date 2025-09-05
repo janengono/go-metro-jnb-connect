@@ -16,7 +16,18 @@ import {
   Calendar,
   Filter
 } from 'lucide-react';
-import { doc, onSnapshot, setDoc, getDoc, updateDoc } from "firebase/firestore";
+import { 
+  doc, 
+  onSnapshot, 
+  setDoc, 
+  getDoc, 
+  updateDoc,
+  collection,
+  query,
+  where,
+  orderBy,
+  limit
+} from "firebase/firestore";
 import { db } from "../lib/firebase";
 import { useAuth } from "../context/AuthContext";
 
@@ -25,8 +36,10 @@ interface Transaction {
   type: 'payment' | 'topup';
   amount: number;
   description: string;
-  date: string;
+  date: Date;
   busNumber?: string;
+  status?: string;
+  paymentMethod?: string;
 }
 
 export const WalletCard: React.FC = () => {
@@ -36,9 +49,14 @@ export const WalletCard: React.FC = () => {
   const [topUpAmount, setTopUpAmount] = useState<number>();
   const [userBalance, setUserBalance] = useState<number>(0);
   const [balanceLoading, setBalanceLoading] = useState(true);
+
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [transactionsLoading, setTransactionsLoading] = useState(true);
+
   const [showLowBalanceToast, setShowLowBalanceToast] = useState(false);
 
-  const monthlySpending = 324.80; // This could also be fetched from Firestore
+
+  const monthlySpending = 324.80; // This could also be calculated from transactions
 
   // Initialize user document with balance if it doesn't exist
   const initializeUserDocument = async () => {
@@ -86,6 +104,42 @@ export const WalletCard: React.FC = () => {
         setUserBalance(data.balance || 0);
       }
       setBalanceLoading(false);
+    });
+    
+    return () => unsubscribe();
+  }, [user?.uid]);
+
+
+  // Subscribe to user transactions
+  useEffect(() => {
+    if (!user?.uid) return;
+    
+    const transactionsQuery = query(
+      collection(db, "transactions"),
+      where("userId", "==", user.uid),
+      orderBy("date", "desc"),
+      limit(50) // Limit to last 50 transactions
+    );
+    
+    const unsubscribe = onSnapshot(transactionsQuery, (snapshot) => {
+      const transactionData: Transaction[] = [];
+      
+      snapshot.docs.forEach((doc) => {
+        const data = doc.data();
+        transactionData.push({
+          id: doc.id,
+          type: data.type,
+          amount: data.type === 'payment' ? -Math.abs(data.amount) : data.amount,
+          description: data.description,
+          date: data.date.toDate(),
+          busNumber: data.busNumber,
+          status: data.status,
+          paymentMethod: data.paymentMethod
+        });
+      });
+      
+      setTransactions(transactionData);
+      setTransactionsLoading(false);
     });
     
     return () => unsubscribe();
@@ -187,9 +241,10 @@ export const WalletCard: React.FC = () => {
     }
   ];
 
+
   // Show only recent transactions when not in history mode
-  const recentTransactions = allTransactions.slice(0, 4);
-  const displayTransactions = showHistory ? allTransactions : recentTransactions;
+  const recentTransactions = transactions.slice(0, 4);
+  const displayTransactions = showHistory ? transactions : recentTransactions;
 
   const quickAmounts = [50, 100, 200, 300];
 
@@ -206,8 +261,7 @@ export const WalletCard: React.FC = () => {
     setTopUpAmount(undefined);
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
+  const formatDate = (date: Date) => {
     return date.toLocaleDateString('en-ZA', {
       day: 'numeric',
       month: 'short',
@@ -249,18 +303,18 @@ export const WalletCard: React.FC = () => {
           {/* History Stats */}
           <div className="grid grid-cols-3 gap-4 mb-4">
             <div className="text-center p-3 bg-primary/10 rounded-xl">
-              <p className="text-lg font-bold text-foreground">{allTransactions.length}</p>
+              <p className="text-lg font-bold text-foreground">{transactions.length}</p>
               <p className="text-xs text-muted-foreground">Total Transactions</p>
             </div>
             <div className="text-center p-3 bg-green-500/10 rounded-xl">
               <p className="text-lg font-bold text-foreground">
-                {allTransactions.filter(t => t.type === 'topup').length}
+                {transactions.filter(t => t.type === 'topup').length}
               </p>
               <p className="text-xs text-muted-foreground">Top-ups</p>
             </div>
             <div className="text-center p-3 bg-red-500/10 rounded-xl">
               <p className="text-lg font-bold text-foreground">
-                {allTransactions.filter(t => t.type === 'payment').length}
+                {transactions.filter(t => t.type === 'payment').length}
               </p>
               <p className="text-xs text-muted-foreground">Payments</p>
             </div>
@@ -280,47 +334,57 @@ export const WalletCard: React.FC = () => {
 
         {/* All Transactions */}
         <Card className="metro-card">
-          <div className="space-y-2 max-h-96 overflow-y-auto">
-            {allTransactions.map((transaction, index) => (
-              <div 
-                key={transaction.id}
-                className="flex items-center justify-between p-3 bg-muted/20 rounded-xl metro-fade-in hover:bg-muted/30 transition-colors"
-                style={{ animationDelay: `${index * 0.05}s` }}
-              >
-                <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-lg ${
-                    transaction.type === 'payment' 
-                      ? 'bg-red-500/10' 
-                      : 'bg-green-500/10'
-                  }`}>
-                    {transaction.type === 'payment' ? (
-                      <ArrowUpRight className="w-4 h-4 text-red-500" />
-                    ) : (
-                      <ArrowDownLeft className="w-4 h-4 text-green-500" />
-                    )}
+          {transactionsLoading ? (
+            <div className="flex items-center justify-center p-8">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+            </div>
+          ) : transactions.length === 0 ? (
+            <div className="text-center p-8 text-muted-foreground">
+              No transactions found
+            </div>
+          ) : (
+            <div className="space-y-2 max-h-96 overflow-y-auto">
+              {transactions.map((transaction, index) => (
+                <div 
+                  key={transaction.id}
+                  className="flex items-center justify-between p-3 bg-muted/20 rounded-xl metro-fade-in hover:bg-muted/30 transition-colors"
+                  style={{ animationDelay: `${index * 0.05}s` }}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-lg ${
+                      transaction.type === 'payment' 
+                        ? 'bg-red-500/10' 
+                        : 'bg-green-500/10'
+                    }`}>
+                      {transaction.type === 'payment' ? (
+                        <ArrowUpRight className="w-4 h-4 text-red-500" />
+                      ) : (
+                        <ArrowDownLeft className="w-4 h-4 text-green-500" />
+                      )}
+                    </div>
+                    
+                    <div>
+                      <p className="font-medium text-foreground">{transaction.description}</p>
+                      {transaction.busNumber && (
+                        <p className="text-sm text-muted-foreground">Bus {transaction.busNumber}</p>
+                      )}
+                      <p className="text-xs text-muted-foreground">{formatDate(transaction.date)}</p>
+                    </div>
                   </div>
                   
-                  <div>
-                    <p className="font-medium text-foreground">{transaction.description}</p>
-                    {transaction.busNumber && (
-                      <p className="text-sm text-muted-foreground">Bus {transaction.busNumber}</p>
-                    )}
-                    <p className="text-xs text-muted-foreground">{formatDate(transaction.date)}</p>
+                  <div className="text-right">
+                    <p className={`font-semibold ${
+                      transaction.type === 'payment' 
+                        ? 'text-red-500' 
+                        : 'text-green-500'
+                    }`}>
+                      {transaction.amount > 0 ? '+' : ''}R{Math.abs(transaction.amount).toFixed(2)}
+                    </p>
                   </div>
                 </div>
-                
-                <div className="text-right">
-                  <p className={`font-semibold ${
-                    transaction.type === 'payment' 
-                      ? 'text-red-500' 
-                      : 'text-green-500'
-                  }`}>
-                    {transaction.amount > 0 ? '+' : ''}R{Math.abs(transaction.amount).toFixed(2)}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </Card>
       </div>
     );
@@ -478,48 +542,58 @@ export const WalletCard: React.FC = () => {
           </Button>
         </div>
         
-        <div className="space-y-3">
-          {displayTransactions.map((transaction, index) => (
-            <div 
-              key={transaction.id}
-              className="flex items-center justify-between p-3 bg-muted/20 rounded-xl metro-fade-in hover:bg-muted/30 transition-colors cursor-pointer"
-              style={{ animationDelay: `${index * 0.1}s` }}
-              onClick={() => setShowHistory(true)}
-            >
-              <div className="flex items-center gap-3">
-                <div className={`p-2 rounded-lg ${
-                  transaction.type === 'payment' 
-                    ? 'bg-red-500/10' 
-                    : 'bg-green-500/10'
-                }`}>
-                  {transaction.type === 'payment' ? (
-                    <ArrowUpRight className="w-4 h-4 text-red-500" />
-                  ) : (
-                    <ArrowDownLeft className="w-4 h-4 text-green-500" />
-                  )}
+        {transactionsLoading ? (
+          <div className="flex items-center justify-center p-4">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+          </div>
+        ) : recentTransactions.length === 0 ? (
+          <div className="text-center p-4 text-muted-foreground">
+            No recent transactions
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {recentTransactions.map((transaction, index) => (
+              <div 
+                key={transaction.id}
+                className="flex items-center justify-between p-3 bg-muted/20 rounded-xl metro-fade-in hover:bg-muted/30 transition-colors cursor-pointer"
+                style={{ animationDelay: `${index * 0.1}s` }}
+                onClick={() => setShowHistory(true)}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-lg ${
+                    transaction.type === 'payment' 
+                      ? 'bg-red-500/10' 
+                      : 'bg-green-500/10'
+                  }`}>
+                    {transaction.type === 'payment' ? (
+                      <ArrowUpRight className="w-4 h-4 text-red-500" />
+                    ) : (
+                      <ArrowDownLeft className="w-4 h-4 text-green-500" />
+                    )}
+                  </div>
+                  
+                  <div>
+                    <p className="font-medium text-foreground">{transaction.description}</p>
+                    {transaction.busNumber && (
+                      <p className="text-sm text-muted-foreground">Bus {transaction.busNumber}</p>
+                    )}
+                    <p className="text-xs text-muted-foreground">{formatDate(transaction.date)}</p>
+                  </div>
                 </div>
                 
-                <div>
-                  <p className="font-medium text-foreground">{transaction.description}</p>
-                  {transaction.busNumber && (
-                    <p className="text-sm text-muted-foreground">Bus {transaction.busNumber}</p>
-                  )}
-                  <p className="text-xs text-muted-foreground">{formatDate(transaction.date)}</p>
+                <div className="text-right">
+                  <p className={`font-semibold ${
+                    transaction.type === 'payment' 
+                      ? 'text-red-500' 
+                      : 'text-green-500'
+                  }`}>
+                    {transaction.amount > 0 ? '+' : ''}R{Math.abs(transaction.amount).toFixed(2)}
+                  </p>
                 </div>
               </div>
-              
-              <div className="text-right">
-                <p className={`font-semibold ${
-                  transaction.type === 'payment' 
-                    ? 'text-red-500' 
-                    : 'text-green-500'
-                }`}>
-                  {transaction.amount > 0 ? '+' : ''}R{Math.abs(transaction.amount).toFixed(2)}
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </Card>
 
       {/* Security Features */}
