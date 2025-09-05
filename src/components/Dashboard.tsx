@@ -80,6 +80,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode, userData }) => {
   const [nearbyBuses, setNearbyBuses] = useState<BusType[]>([]);
   const [selectedBus, setSelectedBus] = useState<BusType | null>(null);
   const [currentReport, setCurrentReport] = useState<ReportType | null>(null);
+  const [balanceLoading, setBalanceLoading] = useState(true);
+  const [showLowBalanceToast, setShowLowBalanceToast] = useState(false);
 
   // 🔑 commuter balance
   const [balance, setBalance] = useState<number>(0);
@@ -168,6 +170,20 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode, userData }) => {
     return () => unsub();
   }, [userMode, user]);
 
+  useEffect(() => {
+      if (userBalance <= 50 && !balanceLoading) {
+        setShowLowBalanceToast(true);
+      } else {
+        setShowLowBalanceToast(false);
+      }
+    }, [userBalance, balanceLoading]);
+    
+    useEffect(() => {
+      if (showLowBalanceToast) {
+        const timer = setTimeout(() => setShowLowBalanceToast(false), 10000);
+        return () => clearTimeout(timer);
+      }
+    }, [showLowBalanceToast]);
   // ---------------- COMMUTER: Nearby buses ----------------
   useEffect(() => {
     if (userMode !== "commuter") return;
@@ -359,6 +375,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode, userData }) => {
   // ---------------- COMMUTER VIEW ----------------
   return (
     <div className="p-4 space-y-6">
+       {/* Low Balance Toast */}
+        {showLowBalanceToast && (
+          <div className="fixed top-4 right-4 z-50 bg-white  px-6 py-3 square shadow-lg">
+            <span className="text-red-600 ">
+              ⚠️ Your balance : R{userBalance.toFixed(2)} is low!
+            </span>
+            
+          </div>
+        )}
       {/* Virtual Card */}
       <div className="flex justify-center">
         <VirtualCard
