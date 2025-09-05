@@ -17,6 +17,7 @@ import {
   Phone,
   AlertCircle,
   CheckCircle,
+
   QrCode,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -24,6 +25,7 @@ import { QRScanner } from "@/components/QRScanner";
 import AuthService from "@/services/authService";
 import { auth } from "@/lib/firebase.ts";
 import cityBackground from "@/assets/hero-bg.jpg";
+
 
 type UserRole = "commuter" | "driver";
 
@@ -41,13 +43,13 @@ export const SignupForm: React.FC<SignupFormProps> = ({
   onBackToRoleSelection,
 }) => {
   const [fullName, setFullName] = useState("");
+
   const [cardNumber, setCardNumber] = useState("");
   const [employeeNumber, setEmployeeNumber] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const { toast } = useToast();
 
-  // ✅ Validate form
   const validateForm = async () => {
     if (!fullName.trim()) {
       setError("Full name is required");
@@ -55,13 +57,16 @@ export const SignupForm: React.FC<SignupFormProps> = ({
     }
 
     if (role === "commuter") {
+
       if (!cardNumber.trim() || cardNumber.length !== 16) {
         setError("Bus card number must be exactly 16 digits");
         return false;
       }
+
       const cardCheck = await AuthService.validateBusCard(cardNumber);
       if (!cardCheck.valid) {
         setError(cardCheck.error || "Invalid bus card");
+
         return false;
       }
     }
@@ -72,11 +77,13 @@ export const SignupForm: React.FC<SignupFormProps> = ({
         return false;
       }
 
+
       const check = await AuthService.verifyEmployee(employeeNumber, phoneNumber);
       if (!check.valid) {
         setError(check.error || "Employee verification failed");
         return false;
       }
+
     }
 
     return true;
@@ -92,6 +99,7 @@ export const SignupForm: React.FC<SignupFormProps> = ({
     setIsLoading(true);
 
     try {
+
       const user = auth.currentUser;
       if (!user) throw new Error("No authenticated user");
 
@@ -99,8 +107,11 @@ export const SignupForm: React.FC<SignupFormProps> = ({
 
       if (role === "commuter") {
         result = await AuthService.saveUserProfile(user.uid, "commuter", {
+
           fullName,
+          employeeNumber,
           phoneNumber,
+
           role,
           cardNumber,
         });
@@ -129,6 +140,7 @@ export const SignupForm: React.FC<SignupFormProps> = ({
         });
       } else {
         setError(result.error || "Signup failed");
+
       }
     } catch (err: any) {
       setError(err.message || "Something went wrong");
@@ -138,6 +150,7 @@ export const SignupForm: React.FC<SignupFormProps> = ({
   };
 
   return (
+
     <div
       className="min-h-screen flex items-center justify-center p-4 relative"
       style={{
@@ -148,6 +161,7 @@ export const SignupForm: React.FC<SignupFormProps> = ({
       }}
     >
       <Card className="w-full max-w-md backdrop-blur-sm bg-card/95">
+
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
             {role === "commuter" ? (
@@ -188,15 +202,17 @@ export const SignupForm: React.FC<SignupFormProps> = ({
             </div>
 
             {role === "commuter" && (
+
               <div className="space-y-2">
                 <Label htmlFor="cardNumber">Card Number</Label>
                 <div className="flex gap-2">
                   <div className="relative flex-1">
+
                     <CreditCard className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="cardNumber"
                       type="text"
-                      placeholder="Enter your bus card number"
+                      placeholder="1234567890123456"
                       value={cardNumber}
                       onChange={(e) =>
                         setCardNumber(e.target.value.replace(/\D/g, ""))
@@ -206,6 +222,7 @@ export const SignupForm: React.FC<SignupFormProps> = ({
                       maxLength={16}
                     />
                   </div>
+
                   <QRScanner onScanResult={setCardNumber}>
                     <Button
                       type="button"
@@ -222,6 +239,7 @@ export const SignupForm: React.FC<SignupFormProps> = ({
                   Scan the QR code on your physical bus card or enter manually
                 </p>
               </div>
+
             )}
 
             {role === "driver" && (

@@ -9,12 +9,16 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+} from "@/components/ui/input-otp";
 import { Phone, Shield, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import cityBackground from "@/assets/hero-bg.jpg";
+import { auth } from "@/firebase/config";
 
-import { auth } from "@/lib/firebase";
 import { signInWithPhoneNumber, RecaptchaVerifier } from "firebase/auth";
 
 interface PhoneVerificationProps {
@@ -37,6 +41,7 @@ export const PhoneVerification: React.FC<PhoneVerificationProps> = ({
     const regex = /^\+27\d{9}$/;
     return regex.test(cleaned);
   };
+
 
   // ✅ Setup reCAPTCHA safely
   const setupRecaptcha = () => {
@@ -64,13 +69,16 @@ export const PhoneVerification: React.FC<PhoneVerificationProps> = ({
     if (!validateSAPhoneNumber(phoneNumber)) {
       toast({
         title: "Invalid Phone Number",
+
         description: "Enter a valid SA number (+27...)",
+
         variant: "destructive",
       });
       return;
     }
 
     setIsLoading(true);
+
     try {
       const appVerifier = setupRecaptcha();
       const confirmation = await signInWithPhoneNumber(
@@ -80,6 +88,7 @@ export const PhoneVerification: React.FC<PhoneVerificationProps> = ({
       );
 
       (window as any).confirmationResult = confirmation;
+
       setIsOtpSent(true);
 
       toast({
@@ -98,28 +107,36 @@ export const PhoneVerification: React.FC<PhoneVerificationProps> = ({
     }
   };
 
+  // ✅ Verify OTP
   const handleVerifyOtp = async () => {
     if (otp.length !== 6) {
       toast({
         title: "Invalid OTP",
+
         description: "Please enter the 6-digit code",
+
         variant: "destructive",
       });
       return;
     }
 
     setIsLoading(true);
+
     try {
       const confirmationResult = (window as any).confirmationResult;
       const result = await confirmationResult.confirm(otp);
 
       console.log("Verified user:", result.user);
+
       setIsVerified(true);
 
       toast({
         title: "Phone Verified!",
         description: "Your number has been verified successfully",
       });
+
+
+      // move on to role selection after short delay
 
       setTimeout(() => {
         onVerificationComplete(phoneNumber);
@@ -137,6 +154,7 @@ export const PhoneVerification: React.FC<PhoneVerificationProps> = ({
   };
 
   return (
+
     <div
       className="min-h-screen flex items-center justify-center p-4 relative"
       style={{
@@ -147,6 +165,7 @@ export const PhoneVerification: React.FC<PhoneVerificationProps> = ({
       }}
     >
       <Card className="w-full max-w-md backdrop-blur-sm bg-card/95">
+
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
             {isVerified ? (
@@ -156,12 +175,16 @@ export const PhoneVerification: React.FC<PhoneVerificationProps> = ({
             )}
           </div>
           <CardTitle className="text-2xl">
+
             {isVerified ? "Phone Verified!" : ""}
+
           </CardTitle>
           <CardDescription>
             {isVerified
               ? "You can now proceed to select your role"
+
               : "Please enter your phone number to get started with GoMetro"}
+
           </CardDescription>
         </CardHeader>
 
@@ -195,7 +218,9 @@ export const PhoneVerification: React.FC<PhoneVerificationProps> = ({
                   <div className="space-y-2">
                     <Label htmlFor="otp">Enter Verification Code</Label>
                     <div className="flex justify-center">
+
                       <InputOTP value={otp} onChange={setOtp} maxLength={6}>
+
                         <InputOTPGroup>
                           {[0, 1, 2, 3, 4, 5].map((i) => (
                             <InputOTPSlot key={i} index={i} />
@@ -238,7 +263,9 @@ export const PhoneVerification: React.FC<PhoneVerificationProps> = ({
             <div className="text-center space-y-4">
               <div className="flex items-center justify-center gap-2 text-green-600">
                 <Shield className="w-5 h-5" />
-                <span className="font-medium">Phone Verified Successfully</span>
+                <span className="font-medium">
+                  Phone Verified Successfully
+                </span>
               </div>
               <p className="text-sm text-muted-foreground">
                 Proceeding to role selection...
@@ -248,7 +275,9 @@ export const PhoneVerification: React.FC<PhoneVerificationProps> = ({
         </CardContent>
       </Card>
 
+
       {/* 🔑 Must always exist for Firebase reCAPTCHA */}
+
       <div id="recaptcha-container"></div>
     </div>
   );
