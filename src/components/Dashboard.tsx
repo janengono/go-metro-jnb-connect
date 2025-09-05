@@ -98,6 +98,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode, userData }) => {
       console.error("Error updating capacity:", err);
     }
   };
+  const getCapacityStatus = (current: number) => {
+      if (current < 60) return "online";     // ✅ Available
+      if (current <= 80) return "full";      // ✅ Full
+      return "warning";                      // ✅ Overcapacity
+    };
 
   // ---------------- DRIVER: Subscribe to assigned bus ----------------
   useEffect(() => {
@@ -220,8 +225,11 @@ useEffect(() => {
         <Card className="metro-card">
           <div className="flex items-center justify-between mb-4">
             <h2 className="metro-subheading">Driver Dashboard</h2>
-            <StatusIndicator status={bus.status as "online" | "warning"} />
-          </div>
+            <StatusIndicator
+              status={getCapacityStatus(bus.current_capacity, bus.capacity) as
+                "online" | "full" | "warning" | "offline"}
+            />
+            </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="text-center p-4 bg-muted/50 rounded-xl">
@@ -440,7 +448,10 @@ useEffect(() => {
                   <Clock className="w-4 h-4 text-muted-foreground" />
                   <span className="font-medium text-foreground">ETA unknown</span>
                 </div>
-                <StatusIndicator status={bus.status as "online" | "warning" | "offline"} />
+                <StatusIndicator
+                  status={getCapacityStatus(bus.current_capacity, bus.capacity) as
+                    "online" | "full" | "warning" | "offline"}
+                />
               </div>
             </div>
           ))}
