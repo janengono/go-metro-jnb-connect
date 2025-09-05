@@ -88,6 +88,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode, userData }) => {
   const driverId = user?.uid;
 
   // ---------------- DRIVER: Capacity update ----------------
+  // ---------------- DRIVER: Capacity update ----------------
   const handleCapacityUpdate = async () => {
     if (!bus || newCapacity === "") return;
     try {
@@ -404,6 +405,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode, userData }) => {
                 type="number"
                 placeholder="0.00"
                 value={topUpAmount}
+                value={topUpAmount}
                 onChange={(e) => setTopUpAmount(Number(e.target.value))}
                 className="text-lg"
               />
@@ -535,3 +537,4 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode, userData }) => {
     </div>
   );
 };
+
