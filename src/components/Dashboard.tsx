@@ -176,22 +176,37 @@ useEffect(() => {
 }, [nearbyBuses]);
 
 
-  // ---------------- Subscribe to latest report ----------------
+  // DRIVER: Subscribe to latest report for driver bus
   useEffect(() => {
-    const targetBusId = userMode === "driver" ? bus?.id : selectedBus?.id;
-    if (!targetBusId) return;
+    if (userMode !== "driver" || !bus?.id) return;
 
-    const reportRef = doc(db, "reports", targetBusId);
+    const reportRef = doc(db, "reports", bus.id);
     const unsub = onDocSnapshot(reportRef, (snap) => {
       if (!snap.exists()) {
         setCurrentReport(null);
         return;
       }
-      const data = snap.data() as ReportType;
-      setCurrentReport(data);
+      setCurrentReport(snap.data() as ReportType);
     });
+
     return () => unsub();
-  }, [bus?.id, selectedBus?.id, userMode]);
+  }, [userMode, bus?.id]);
+
+  // COMMUTER: Subscribe to latest report for selected bus
+    useEffect(() => {
+      if (userMode !== "commuter" || !selectedBus?.id) return;
+
+      const reportRef = doc(db, "reports", selectedBus.id);
+      const unsub = onDocSnapshot(reportRef, (snap) => {
+        if (!snap.exists()) {
+          setCurrentReport(null);
+          return;
+        }
+        setCurrentReport(snap.data() as ReportType);
+      });
+
+      return () => unsub();
+    }, [userMode, selectedBus?.id]);
 
   if (loading) return <div className="p-6">Loading dashboard…</div>;
 
