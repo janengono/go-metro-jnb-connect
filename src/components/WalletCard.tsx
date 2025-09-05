@@ -36,6 +36,7 @@ export const WalletCard: React.FC = () => {
   const [topUpAmount, setTopUpAmount] = useState<number>();
   const [userBalance, setUserBalance] = useState<number>(0);
   const [balanceLoading, setBalanceLoading] = useState(true);
+  const [showLowBalanceToast, setShowLowBalanceToast] = useState(false);
 
   const monthlySpending = 324.80; // This could also be fetched from Firestore
 
@@ -89,6 +90,21 @@ export const WalletCard: React.FC = () => {
     
     return () => unsubscribe();
   }, [user?.uid]);
+
+    useEffect(() => {
+        if (userBalance <= 50 && !balanceLoading) {
+          setShowLowBalanceToast(true);
+        } else {
+          setShowLowBalanceToast(false);
+        }
+      }, [userBalance, balanceLoading]);
+      
+      useEffect(() => {
+        if (showLowBalanceToast) {
+          const timer = setTimeout(() => setShowLowBalanceToast(false), 10000);
+          return () => clearTimeout(timer);
+        }
+      }, [showLowBalanceToast]);
 
   // Extended transaction history with more entries
   const allTransactions: Transaction[] = [
@@ -313,6 +329,15 @@ export const WalletCard: React.FC = () => {
   // Default wallet view
   return (
     <div className="p-4 space-y-6">
+      {/* Low Balance Toast */}
+        {showLowBalanceToast && (
+          <div className="fixed top-4 right-4 z-50 bg-white  px-6 py-3 square shadow-lg">
+            <span className="text-red-600 ">
+              ⚠️ Your balance : R{userBalance.toFixed(2)} is low!
+            </span>
+            
+          </div>
+        )}
       {/* Balance Card */}
       <Card className="metro-card metro-gradient-card">
         <div className="flex items-center justify-between mb-6">
