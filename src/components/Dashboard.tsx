@@ -81,9 +81,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode, userData }) => {
   const [selectedBus, setSelectedBus] = useState<BusType | null>(null);
   const [currentReport, setCurrentReport] = useState<ReportType | null>(null);
 
+  // 🔑 commuter balance
+  const [balance, setBalance] = useState<number>(0);
+
   const quickAmounts = [50, 100, 200, 300];
   const driverId = user?.uid;
 
+  // ---------------- DRIVER: Capacity update ----------------
   // ---------------- DRIVER: Capacity update ----------------
   const handleCapacityUpdate = async () => {
     if (!bus || newCapacity === "") return;
@@ -98,11 +102,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode, userData }) => {
       console.error("Error updating capacity:", err);
     }
   };
+
   const getCapacityStatus = (current: number) => {
-      if (current < 60) return "online";     // ✅ Available
-      if (current <= 80) return "full";      // ✅ Full
-      return "warning";                      // ✅ Overcapacity
-    };
+    if (current < 60) return "online"; // ✅ Available
+    if (current <= 80) return "full"; // ✅ Full
+    return "warning"; // ✅ Overcapacity
+  };
 
   // ---------------- DRIVER: Subscribe to assigned bus ----------------
   useEffect(() => {
@@ -149,37 +154,48 @@ export const Dashboard: React.FC<DashboardProps> = ({ userMode, userData }) => {
     });
     return () => unsub();
   }, [bus?.route_id]);
-  //if (loading) return <div className="p-6">Loading dashboard…</div>;
-  // ---------------- COMMUTER: Nearby buses ----------------
-  // Subscribe to nearby buses
-useEffect(() => {
-  if (userMode !== "commuter") return;
-  const q = query(collection(db, "buses"));
-  const unsub = onSnapshot(q, (snapshot) => {
-    const buses: BusType[] = snapshot.docs.map((doc) => {
-      const data = doc.data() as DocumentData;
-      return {
-        id: doc.id,
-        bus_number: data.bus_number,
-        route_id: data.route_id,
-        capacity: data.capacity,
-        current_capacity: data.current_capacity,
-        status: data.status,
-      };
+
+  // ---------------- COMMUTER: Balance subscription ----------------
+  useEffect(() => {
+    if (userMode !== "commuter" || !user) return;
+    const userRef = doc(db, "users", user.uid);
+    const unsub = onDocSnapshot(userRef, (snap) => {
+      if (snap.exists()) {
+        const data = snap.data() as DocumentData;
+        setBalance(data.balance || 0);
+      }
     });
-    setNearbyBuses(buses);
-    if (buses.length > 0 && !selectedBus) setSelectedBus(buses[0]);
-  });
-  return () => unsub();
-}, [userMode, selectedBus]);
+    return () => unsub();
+  }, [userMode, user]);
 
-// Ensure selectedBus updates when nearbyBuses changes
-useEffect(() => {
-  if (!selectedBus) return;
-  const updated = nearbyBuses.find((b) => b.id === selectedBus.id);
-  if (updated) setSelectedBus(updated);
-}, [nearbyBuses]);
+  // ---------------- COMMUTER: Nearby buses ----------------
+  useEffect(() => {
+    if (userMode !== "commuter") return;
+    const q = query(collection(db, "buses"));
+    const unsub = onSnapshot(q, (snapshot) => {
+      const buses: BusType[] = snapshot.docs.map((doc) => {
+        const data = doc.data() as DocumentData;
+        return {
+          id: doc.id,
+          bus_number: data.bus_number,
+          route_id: data.route_id,
+          capacity: data.capacity,
+          current_capacity: data.current_capacity,
+          status: data.status,
+        };
+      });
+      setNearbyBuses(buses);
+      if (buses.length > 0 && !selectedBus) setSelectedBus(buses[0]);
+    });
+    return () => unsub();
+  }, [userMode, selectedBus]);
 
+  // Ensure selectedBus updates when nearbyBuses changes
+  useEffect(() => {
+    if (!selectedBus) return;
+    const updated = nearbyBuses.find((b) => b.id === selectedBus.id);
+    if (updated) setSelectedBus(updated);
+  }, [nearbyBuses]);
 
   // DRIVER: Subscribe to latest report for driver bus
   useEffect(() => {
@@ -198,20 +214,20 @@ useEffect(() => {
   }, [userMode, bus?.id]);
 
   // COMMUTER: Subscribe to latest report for selected bus
-    useEffect(() => {
-      if (userMode !== "commuter" || !selectedBus?.id) return;
+  useEffect(() => {
+    if (userMode !== "commuter" || !selectedBus?.id) return;
 
-      const reportRef = doc(db, "reports", selectedBus.id);
-      const unsub = onDocSnapshot(reportRef, (snap) => {
-        if (!snap.exists()) {
-          setCurrentReport(null);
-          return;
-        }
-        setCurrentReport(snap.data() as ReportType);
-      });
+    const reportRef = doc(db, "reports", selectedBus.id);
+    const unsub = onDocSnapshot(reportRef, (snap) => {
+      if (!snap.exists()) {
+        setCurrentReport(null);
+        return;
+      }
+      setCurrentReport(snap.data() as ReportType);
+    });
 
-      return () => unsub();
-    }, [userMode, selectedBus?.id]);
+    return () => unsub();
+  }, [userMode, selectedBus?.id]);
 
   if (loading) return <div className="p-6">Loading dashboard…</div>;
 
@@ -226,10 +242,15 @@ useEffect(() => {
           <div className="flex items-center justify-between mb-4">
             <h2 className="metro-subheading">Driver Dashboard</h2>
             <StatusIndicator
-              status={getCapacityStatus(bus.current_capacity) as
-                "online" | "full" | "warning" | "offline"}
+              status={
+                getCapacityStatus(bus.current_capacity) as
+                  | "online"
+                  | "full"
+                  | "warning"
+                  | "offline"
+              }
             />
-            </div>
+          </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="text-center p-4 bg-muted/50 rounded-xl">
@@ -342,7 +363,7 @@ useEffect(() => {
       <div className="flex justify-center">
         <VirtualCard
           cardNumber={userData.cardNumber || "0000000000000000"}
-          balance={87.5}
+          balance={balance}
           holderName={userData.fullName}
           className="mb-2"
         />
@@ -351,7 +372,10 @@ useEffect(() => {
       {/* Balance Actions */}
       <Card className="metro-card">
         <div className="flex justify-center">
-          <Button className="w-full max-w-sm" onClick={() => setShowTopUp(true)}>
+          <Button
+            className="w-full max-w-sm"
+            onClick={() => setShowTopUp(true)}
+          >
             <Plus className="w-4 h-4 mr-2" />
             Top Up
           </Button>
@@ -363,7 +387,11 @@ useEffect(() => {
         <Card className="metro-card border-primary/20">
           <div className="flex items-center justify-between mb-4">
             <h3 className="metro-subheading">Top Up Wallet</h3>
-            <Button variant="ghost" size="sm" onClick={() => setShowTopUp(false)}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowTopUp(false)}
+            >
               ✕
             </Button>
           </div>
@@ -377,13 +405,16 @@ useEffect(() => {
                 type="number"
                 placeholder="0.00"
                 value={topUpAmount}
+                value={topUpAmount}
                 onChange={(e) => setTopUpAmount(Number(e.target.value))}
                 className="text-lg"
               />
             </div>
 
             <div>
-              <p className="text-sm font-medium text-foreground mb-2">Quick Amounts</p>
+              <p className="text-sm font-medium text-foreground mb-2">
+                Quick Amounts
+              </p>
               <div className="grid grid-cols-4 gap-2">
                 {quickAmounts.map((amount) => (
                   <Button
@@ -400,7 +431,10 @@ useEffect(() => {
 
             <div className="flex justify-center mt-4">
               {topUpAmount && topUpAmount >= 50 ? (
-                <TopUp topUpAmount={topUpAmount} onClose={() => setShowTopUp(false)} />
+                <TopUp
+                  topUpAmount={topUpAmount}
+                  onClose={() => setShowTopUp(false)}
+                />
               ) : (
                 <p className="text-sm text-muted-foreground">
                   Enter R50 or more to enable Google Pay
@@ -439,18 +473,29 @@ useEffect(() => {
                   <Bus className="w-5 h-5 text-primary" />
                 </div>
                 <div>
-                  <p className="font-semibold text-foreground">Bus {bus.bus_number}</p>
-                  <p className="text-sm text-muted-foreground">Route: {bus.route_id}</p>
+                  <p className="font-semibold text-foreground">
+                    Bus {bus.bus_number}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Route: {bus.route_id}
+                  </p>
                 </div>
               </div>
               <div className="text-right">
                 <div className="flex items-center gap-2 mb-1">
                   <Clock className="w-4 h-4 text-muted-foreground" />
-                  <span className="font-medium text-foreground">ETA unknown</span>
+                  <span className="font-medium text-foreground">
+                    ETA unknown
+                  </span>
                 </div>
                 <StatusIndicator
-                  status={getCapacityStatus(bus.current_capacity) as
-                    "online" | "full" | "warning" | "offline"}
+                  status={
+                    getCapacityStatus(bus.current_capacity) as
+                      | "online"
+                      | "full"
+                      | "warning"
+                      | "offline"
+                  }
                 />
               </div>
             </div>
@@ -492,3 +537,4 @@ useEffect(() => {
     </div>
   );
 };
+
