@@ -1,7 +1,7 @@
 import {
   onAuthStateChanged,
   signOut,
-  User
+  User,
 } from "firebase/auth";
 import {
   collection,
@@ -11,7 +11,7 @@ import {
   query,
   serverTimestamp,
   setDoc,
-  where
+  where,
 } from "firebase/firestore";
 import { auth, db } from "../lib/firebase";
 
@@ -59,36 +59,101 @@ class AuthService {
   }
 
   // ✅ Save user profile after phone auth
-  async saveUserProfile(
-    uid: string,
-    role: "commuter" | "driver",
-    data: Record<string, any>
-  ) {
-    try {
+  // ✅ Save user profile after phone auth
+async saveUserProfile(
+  uid: string,
+  role: "commuter" | "driver",
+  data: Record<string, any>
+) {
+  try {
+    // 1. Check if phone number already exists
+    const q = query(collection(db, "users"), where("phoneNumber", "==", data.phoneNumber));
+    const querySnapshot = await getDocs(q);
+
+    if (!querySnapshot.empty) {
+      const existingUser = querySnapshot.docs[0].data();
+
+      if (role === "commuter") {
+        // Must match cardNumber + fullName
+        if (
+          existingUser.cardNumber !== data.cardNumber ||
+          existingUser.fullName !== data.fullName
+        ) {
+          return { success: false, error: "Phone already linked to another commuter" };
+        }
+      }
+
+      if (role === "driver") {
+        // Must match employeeNumber + fullName + position + active
+        if (
+          existingUser.employeeNumber !== data.employeeNumber ||
+          existingUser.fullName !== data.fullName
+        ) {
+          return { success: false, error: "Phone already linked to another driver" };
+        }
+
+        // Double-check employee record
+        const empDoc = await getDocs(
+          query(
+            collection(db, "employees"),
+            where("employeeNumber", "==", data.employeeNumber),
+            where("active", "==", true)
+          )
+        );
+
+        if (
+          empDoc.empty ||
+          empDoc.docs[0].data().position !== "Driver"
+        ) {
+          return { success: false, error: "Not a valid driver" };
+        }
+      }
+
+      // If passed validation, just update updatedAt
       await setDoc(
-        doc(db, "users", uid),
-        {
-          uid,
-          role,
-          ...data,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        },
+        doc(db, "users", existingUser.uid),
+        { updatedAt: serverTimestamp() },
         { merge: true }
       );
-      return { success: true };
-    } catch (error: any) {
-      return { success: false, error: error.message };
+      return { success: true, existing: true };
     }
+
+    // 2. Create new user if phone is not taken
+    await setDoc(
+      doc(db, "users", uid),
+      {
+        uid,
+        role,
+        ...data,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+
+    return { success: true, new: true };
+  } catch (error: any) {
+    return { success: false, error: error.message };
   }
+}
+
 
   // ✅ Verify employee exists AND is a driver
   async verifyEmployee(employeeNumber: string, cellphoneNumber: string) {
     try {
+       // Normalize phone number to +27 format
+      const normalizePhone = (num: string) => {
+        if (num.startsWith("0")) {
+          return "+27" + num.substring(1);
+        }
+        return num;
+      };
+
+      const normalizedPhone = normalizePhone(cellphoneNumber);
       const q = query(
         collection(db, "employees"),
         where("employeeNumber", "==", employeeNumber),
-        where("cellphoneNumber", "==", cellphoneNumber),
+        where("cellphoneNumber", "==", normalizedPhone),
         where("active", "==", true)
       );
 
@@ -100,7 +165,7 @@ class AuthService {
 
       const employeeData = querySnapshot.docs[0].data();
 
-      if (!employeeData.position || employeeData.position !== "Driver") {
+      if (employeeData.position !== "Driver") {
         return { valid: false, error: "You are not registered as a Driver" };
       }
 

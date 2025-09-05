@@ -101,14 +101,12 @@ export const SignupForm: React.FC<SignupFormProps> = ({
         result = await AuthService.saveUserProfile(user.uid, "commuter", {
           fullName,
           phoneNumber,
-          role,
           cardNumber,
         });
       } else if (role === "driver") {
         result = await AuthService.saveUserProfile(user.uid, "driver", {
           fullName,
           phoneNumber,
-          role,
           employeeNumber,
         });
       }
